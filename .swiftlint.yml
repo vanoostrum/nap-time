@@ -1,0 +1,15 @@
+included:
+  - NapTime
+  - NapTimeTests
+  - Packages/Core/Sources
+  - Packages/Core/Tests
+excluded:
+  - Packages/Core/.build
+opt_in_rules:
+  - empty_count
+  - first_where
+line_length:
+  warning: 140
+  error: 200
+identifier_name:
+  excluded: [id, x, y]

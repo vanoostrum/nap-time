@@ -1,0 +1,157 @@
+# Factory stage definitions: the harness-neutral source of truth.
+# Harness-specific automation configs (factory/automations/*) are derived from this file.
+#
+# Placeholders:
+#   <KEY>   issue key prefix (team.key in factory/linear.yaml)
+#   <num>   issue number
+# Model classes: reasoning | coding | review-different-family | fast
+# Triggers are described neutrally as <source>.<event>[: <filter>].
+
+version: 1
+
+defaults:
+  loop_cap: 3
+  branch_pattern: "<key>-<num>/<slug>"      # lowercase key
+  pr_title_pattern: "[<KEY>-<num>] <title>"
+  commit_trailers: ["Factory-Issue: <KEY>-<num>", "Factory-Stage: <stage>"]
+  run_record: "stage | model | started | finished | outcome | notes"
+  escalation_state: Needs human
+  reporting:
+    human: slack.item_thread        # permalink stored as `Slack-Thread:` in the issue description
+    detail: slack.log_channel       # prefixed [<KEY>-<num>]
+    record: linear.comment          # run record
+
+channels:
+  interface: "#factory"
+  log: "#factory-log"
+
+stages:
+  - name: front-desk
+    linear_state: null              # acts on any state; creates issues and drives gate transitions
+    trigger:
+      - slack.message_posted: "#factory (top-level and thread replies)"
+      - slack.reaction_added: "#factory, emoji white_check_mark"
+    skill: factory/front-desk
+    model_class: fast
+    outputs: [linear.issue, linear.state_change, slack.thread_reply, github.pr_merge]
+    next_state: Specifying          # for new items; gate approvals → see gates below
+    on_failure: reply in thread asking for clarification; no state change
+    loop_cap: 2                     # max clarifying questions per item
+    gate: false
+
+  - name: spec
+    linear_state: Specifying
+    trigger: { linear.status_changed: Specifying }
+    skill: factory/write-spec
+    delegates_to: [factory/plan-tasks]
+    model_class: reasoning
+    outputs: [repo.spec_file, github.spec_pr, slack.gate_message]
+    next_state: Spec review
+    on_failure: Needs human
+    loop_cap: 3
+    gate: false
+
+  - name: spec-gate
+    linear_state: Spec review
+    trigger: { human.approval: "✅ reaction or 'approve' reply in item thread (handled by front-desk)" }
+    skill: factory/front-desk
+    model_class: fast
+    outputs: [github.spec_pr_merged]
+    next_state: Building
+    on_feedback: Specifying          # feedback added as Linear comment
+    on_failure: Needs human
+    loop_cap: 0
+    gate: true
+
+  - name: build
+    linear_state: Building
+    trigger: { linear.status_changed: Building }
+    skill: factory/implement-task
+    delegates_to: [project/verify-*]
+    model_class: coding
+    outputs: [github.code_pr, repo.commits]
+    next_state: Verifying
+    on_failure: Needs human
+    loop_cap: 3
+    gate: false
+
+  - name: verify
+    linear_state: Verifying
+    trigger: { github.ci_completed: "<key>-* branches" }
+    skill: null                     # CI itself; routing handled by ci-fix / review stages
+    model_class: null
+    outputs: [github.check_run]
+    next_state: Reviewing           # on success
+    on_failure: ci-fix
+    loop_cap: 0
+    gate: false
+
+  - name: ci-fix
+    linear_state: Verifying
+    trigger: { github.workflow_run_completed: "CI, conclusion=failure, branch <key>-*" }
+    skill: factory/fix-ci-failure
+    delegates_to: [project/verify-*]
+    model_class: coding
+    outputs: [repo.commits]
+    next_state: Verifying           # CI re-runs on push
+    on_failure: Needs human
+    loop_cap: 3                     # counted via `Factory-Stage: ci-fix` trailers on the branch
+    gate: false
+
+  - name: review
+    linear_state: Reviewing
+    trigger: { github.ci_completed: "CI, conclusion=success, PR from <key>-* branch" }
+    skill: factory/review-against-spec
+    model_class: review-different-family
+    outputs: [github.pr_review_comment, slack.gate_message]
+    next_state: Ready to merge
+    on_changes_requested: Building
+    on_failure: Needs human
+    loop_cap: 3                     # review → build round trips
+    gate: false
+
+  - name: comment-fix
+    linear_state: Reviewing
+    trigger: { github.pr_review_comment: "PR from <key>-* branch" }
+    skill: factory/implement-task   # in "address review comments" mode
+    model_class: coding
+    outputs: [repo.commits, github.pr_comment_reply]
+    next_state: Verifying
+    on_failure: Needs human
+    loop_cap: 3
+    gate: false
+
+  - name: merge-gate
+    linear_state: Ready to merge
+    trigger: { human.approval: "✅ reaction or 'approve' reply in item thread (handled by front-desk)" }
+    skill: factory/front-desk
+    model_class: fast
+    outputs: [github.code_pr_merged]
+    next_state: Shipping
+    on_feedback: Building
+    on_failure: Needs human
+    loop_cap: 0
+    gate: true
+
+  - name: ship
+    linear_state: Shipping
+    trigger: { github.push: main }
+    skill: null                     # release workflow (see project/release-* skill)
+    model_class: null
+    outputs: [release.build]
+    next_state: null                # release-notes stage moves to Done
+    on_failure: Needs human
+    loop_cap: 0
+    gate: false
+
+  - name: release-notes
+    linear_state: Shipping
+    trigger: { github.workflow_run_completed: "Release, conclusion=success, branch main" }
+    skill: factory/write-release-notes
+    delegates_to: [project/release-*]
+    model_class: fast
+    outputs: [release.notes, slack.thread_reply]
+    next_state: Done
+    on_failure: Needs human
+    loop_cap: 1
+    gate: false

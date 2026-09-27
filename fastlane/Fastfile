@@ -1,0 +1,73 @@
+default_platform(:ios)
+
+APP_ID = "nl.clearblocks.naptime"
+PROJECT = "NapTime.xcodeproj"
+SCHEME = "NapTime"
+MATCH_GIT_URL = ENV.fetch("MATCH_GIT_URL", "git@github.com:vanoostrum/nap-time-certificates.git")
+
+platform :ios do
+  private_lane :asc_auth do
+    app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_content: ENV["ASC_KEY_CONTENT"],
+      key_filepath: ENV["ASC_KEY_PATH"],
+      is_key_content_base64: !ENV["ASC_KEY_CONTENT"].to_s.empty?,
+      in_house: false
+    )
+  end
+
+  desc "Create/refresh App Store signing assets in the match repo (run locally, once)"
+  lane :certs do
+    asc_auth
+    match(type: "appstore", app_identifier: APP_ID, git_url: MATCH_GIT_URL, readonly: false)
+  end
+
+  desc "Build and upload to TestFlight"
+  lane :beta do
+    setup_ci if ENV["CI"]
+    asc_auth
+    match(type: "appstore", app_identifier: APP_ID, git_url: MATCH_GIT_URL, readonly: true)
+
+    sh("cd .. && xcodegen generate")
+
+    build_number = latest_testflight_build_number(app_identifier: APP_ID, initial_build_number: 0) + 1
+    increment_build_number(xcodeproj: PROJECT, build_number: build_number)
+
+    team_id = ENV.fetch("APPLE_TEAM_ID")
+    update_code_signing_settings(
+      path: PROJECT,
+      use_automatic_signing: false,
+      team_id: team_id,
+      targets: ["NapTime"],
+      code_sign_identity: "Apple Distribution",
+      profile_name: lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING][APP_ID]
+    )
+
+    build_app(
+      project: PROJECT,
+      scheme: SCHEME,
+      export_method: "app-store",
+      xcargs: "DEVELOPMENT_TEAM=#{team_id}"
+    )
+
+    changelog = changelog_from_git_commits(commits_count: 10, pretty: "- %s", merge_commit_filtering: "exclude_merges")
+    upload_to_testflight(changelog: changelog, skip_waiting_for_build_processing: true)
+
+    version = get_version_number(xcodeproj: PROJECT, target: "NapTime")
+    File.write("build_info.txt", "- Version: #{version}\n- Build: #{build_number}\n- Commit: #{last_git_commit[:abbreviated_commit_hash]}\n")
+  end
+
+  desc "Set TestFlight 'What to Test' notes for a build (BUILD_NUMBER, NOTES env)"
+  lane :notes do
+    asc_auth
+    upload_to_testflight(
+      app_identifier: APP_ID,
+      distribute_only: true,
+      build_number: ENV.fetch("BUILD_NUMBER"),
+      app_platform: "ios",
+      changelog: ENV.fetch("NOTES")[0, 4000],
+      wait_processing_timeout_duration: 1800
+    )
+  end
+end

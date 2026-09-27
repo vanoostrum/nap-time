@@ -1,0 +1,31 @@
+# Xcode / XcodeGen (project is generated from project.yml)
+*.xcodeproj/
+*.xcworkspace/
+!Packages/**/*.xcworkspace/
+xcuserdata/
+DerivedData/
+build/
+*.xcresult
+.swiftpm/
+.build/
+Packages/*/.build/
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+*.ipa
+*.dSYM.zip
+*.mobileprovision
+*.p8
+*.p12
+*.cer
+
+# Secrets / env
+.env
+.env.*
+
+.DS_Store
+vendor/bundle/
+.bundle/

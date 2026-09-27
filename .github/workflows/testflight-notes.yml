@@ -1,0 +1,29 @@
+name: TestFlight Notes
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: TestFlight build number
+        required: true
+      notes:
+        description: What to test (max 4000 chars)
+        required: true
+
+jobs:
+  notes:
+    name: Set What to Test
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+      BUILD_NUMBER: ${{ inputs.build_number }}
+      NOTES: ${{ inputs.notes }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - run: bundle exec fastlane notes
