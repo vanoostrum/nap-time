@@ -1,0 +1,32 @@
+# Slack app manifest for the one-off "Factory Setup" bot.
+# Used only to bootstrap channels and pinned messages; runtime Slack
+# interaction goes through the execution layer's own Slack integration.
+_metadata:
+  major_version: 2
+  minor_version: 1
+
+display_information:
+  name: Factory Setup
+  description: Bootstraps factory channels and pinned guidance. Setup only.
+  background_color: "#2c2d30"
+
+features:
+  bot_user:
+    display_name: factory-setup
+    always_online: false
+
+oauth_config:
+  scopes:
+    bot:
+      - channels:manage   # create public channels, invite members
+      - channels:read     # find existing channels (idempotency)
+      - channels:join     # join channels created by others
+      - channels:history  # detect already-posted messages (idempotent re-runs)
+      - chat:write        # post the guidance messages
+      - pins:write        # pin the guidance message
+      - pins:read         # check whether it is already pinned
+
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
