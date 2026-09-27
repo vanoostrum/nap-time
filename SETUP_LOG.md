@@ -31,7 +31,7 @@ Branch: `factory-setup` · Secrets live in `~/.config/factory-setup/.env` (never
 - [x] 3.3 Factory skills (8) + project skills (2)
 - [x] 3.4 XcodeGen SwiftUI app + `Core` package; local build + test
 - [x] 3.5 CI/CD: `ci.yml`, `release.yml`, fastlane, `Gemfile`, PR template, GitHub labels
-- [ ] 3.6 Commit, PR, MANUAL merge, branch protection on `main`
+- [~] 3.6 Commit, PR ✅ https://github.com/vanoostrum/nap-time/pull/1 · MANUAL merge ⏳ · branch protection ⏳
 
 ### Phase 4 — Apple / TestFlight
 - [ ] 4.1 MANUAL: Team ID, App ID, ASC app record, ASC API key
@@ -42,7 +42,7 @@ Branch: `factory-setup` · Secrets live in `~/.config/factory-setup/.env` (never
 ### Phase 5 — Cursor
 - [ ] 5.1 MANUAL: connect GitHub/Slack/Linear, spend limit, cloud agent env
 - [ ] 5.2 Bugbot (+Autofix), Security Reviewer
-- [ ] 5.3 `factory/automations/*.md` (7)
+- [x] 5.3 `factory/automations/*.md` (7)
 - [ ] 5.4 Create automations (API/Terraform or manual)
 - [ ] 5.5 Verify automations active
 - [ ] 5.6 Open questions: threaded Send to Slack? Linear status/comment ability?
@@ -86,7 +86,14 @@ _(IDs, URLs, names — never secrets)_
 - Workflows: `CI` (job **Build & Test**, macos-26), `Release` (push to main + dispatch), `TestFlight Notes` (dispatch; lets Linux agents set What to Test without ASC creds)
 - GitHub labels: `type:feature`, `type:bug`, `type:chore`, `risk:low`, `risk:high`, `factory`
 
+### Phase 4/5 prep
+- Match deploy key generated (`~/.config/factory-setup/match_deploy_key`, outside repo); private key pushed as secret `MATCH_DEPLOY_KEY`; public key must be added to `nap-time-certificates` manually (PAT got 403 on deploy-keys API)
+- Cursor model mapping: reasoning `claude-opus-5-5`, coding `claude-sonnet-5`, review `gpt-5.6-sol`, fast `claude-haiku-4-5` (see `factory/automations/README.md`)
+
 ## Deviations from the prompt
+- **Cursor automations can't be created programmatically**: no documented API (`GET /v1/automations` → 404) and no Terraform provider in the registry → one manual step per automation.
+- **No built-in Linear editing tool** in Cursor automations (docs list Linear only as a trigger) → automations get the Linear MCP server (`https://mcp.linear.app/mcp`).
+- `factory/automations/*.md` name the repo (`vanoostrum/nap-time`) and Linear team, which is harness instance config; they contain no stack mentions.
 - Added `.github/workflows/testflight-notes.yml` + `notes` lane: cloud agents have no App Store Connect credentials, so `write-release-notes` sets notes by dispatching this workflow.
 - Match auth in CI uses an SSH **deploy key** (read-only) on `nap-time-certificates` (`MATCH_DEPLOY_KEY` secret) instead of a PAT.
 - `factory/linear.yaml` contains the team name "Nap Time" — it is instance data mandated by the prompt; stage definitions and factory skills stay app-agnostic (checked with grep).
