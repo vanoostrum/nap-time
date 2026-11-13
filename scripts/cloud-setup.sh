@@ -30,7 +30,7 @@ else
   rm -rf "$tmp"
 fi
 
-if swiftly list 2> /dev/null | grep -q "Swift $version"; then
+if swiftly list 2> /dev/null | grep -F "Swift $version" > /dev/null; then
   echo "cloud-setup: Swift $version is installed"
 else
   echo "cloud-setup: installing Swift $version"
