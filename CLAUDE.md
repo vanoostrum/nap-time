@@ -10,7 +10,8 @@ If a skill is unknown, read `.claude/skills/<name>/SKILL.md` and follow it.
 
 - `project.yml` is the source of the Xcode project. Run `xcodegen generate`. Do not commit `NapTime.xcodeproj`. See `docs/adr/0001-xcodegen.md`.
 - All pure logic lives in `Packages/Core`, which imports Foundation only. The app and widget targets stay thin. See `docs/adr/0002-core-package.md`.
-- **Test seam:** unit tests call the public API of `Packages/Core`. App behavior is tested through the UI test target `NapTimeUITests` in test mode. Do not test SwiftUI view internals.
+- The family store lives in the framework target `NapTimeStore`, which the app and the widget both link. See `docs/adr/0005-core-data-cloudkit.md`.
+- **Test seam:** unit tests call the public API of `Packages/Core`, or of `NapTimeStore` in the unit test target `NapTimeStoreTests` with an in-memory store. App behavior is tested through the UI test target `NapTimeUITests` in test mode. Do not test SwiftUI view internals.
 - `swift format lint --strict` is the linter.
 - No third-party Swift packages without a ticket that says why.
 - `.xcode-version` and `.swift-version` change together, in one ticket.
