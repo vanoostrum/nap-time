@@ -27,12 +27,18 @@ SKILL = ROOT / ".claude/skills/drive-app/SKILL.md"
 
 
 def gh(path, raw=False):
+    """Calls `gh api`, with up to 3 tries for a network error or a 5xx answer."""
     args = ["gh", "api", path]
     if raw:
         args[2:2] = ["-H", "Accept: application/vnd.github.raw"]
-    result = subprocess.run(args, capture_output=True)
+    for attempt in range(3):
+        result = subprocess.run(args, capture_output=True)
+        error = result.stderr.decode(errors="replace").strip()
+        if result.returncode == 0 or not re.search(r"HTTP 5\d\d|timeout|connection", error, re.IGNORECASE):
+            break
+        time.sleep(5 * (attempt + 1))
     if result.returncode != 0:
-        raise RuntimeError(f"gh api {path}: {result.stderr.decode(errors='replace').strip()}")
+        raise RuntimeError(f"gh api {path}: {error}")
     return result.stdout if raw else json.loads(result.stdout)
 
 

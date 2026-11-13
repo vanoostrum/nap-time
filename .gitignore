@@ -13,3 +13,4 @@ DerivedData/
 .DS_Store
 xcuserdata/
 .swiftpm/
+__pycache__/
