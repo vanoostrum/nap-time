@@ -1,5 +1,5 @@
 #!/bin/bash
-# Selects the Xcode in .xcode-version and prints an iPhone simulator with the newest iOS 27.x as SIMULATOR_ID.
+# Selects the Xcode in .xcode-version and prints an iPhone simulator with the newest iOS as SIMULATOR_ID.
 # CI only. Usage: scripts/ci-select-xcode.sh >> "$GITHUB_ENV"
 set -euo pipefail
 
@@ -19,14 +19,14 @@ import json, sys
 devices = json.load(sys.stdin)["devices"]
 best = None
 for runtime, items in devices.items():
-    if ".iOS-27-" not in runtime:
+    if ".SimRuntime.iOS-" not in runtime:
         continue
-    minor = int(runtime.rsplit("-", 1)[-1]) if runtime.count("-") >= 2 else 0
+    version = tuple(int(p) for p in runtime.split(".SimRuntime.iOS-", 1)[1].split("-"))
     for d in items:
-        if d["name"].startswith("iPhone") and (best is None or minor > best[0]):
-            best = (minor, d["udid"], d["name"], runtime)
+        if d["name"].startswith("iPhone") and (best is None or version > best[0]):
+            best = (version, d["udid"], d["name"], runtime)
 if best is None:
-    sys.exit("No iPhone simulator with iOS 27 on this runner")
+    sys.exit("No iPhone simulator on this runner")
 print(best[1])
 print(best[2], best[3], file=sys.stderr)
 ')"
