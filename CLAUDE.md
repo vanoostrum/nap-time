@@ -6,6 +6,8 @@ An iOS app to track a young child's sleep. Swift 6 with strict concurrency, Swif
 
 If a skill is unknown, read `.claude/skills/<name>/SKILL.md` and follow it.
 
+Every code change goes through craft. Start with `craft:spec` for a single ticket, or `craft:plan` for bigger work. Never edit code outside a craft step.
+
 ## Engineering rules
 
 - `project.yml` is the source of the Xcode project. Run `xcodegen generate`. Do not commit `NapTime.xcodeproj`. See `docs/adr/0001-xcodegen.md`.
