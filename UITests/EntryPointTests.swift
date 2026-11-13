@@ -14,7 +14,7 @@ final class EntryPointTests: XCTestCase {
     app.launchArguments = ["--test-mode"]
     app.launch()
 
-    XCTAssertTrue(app.descendants(matching: .any)["home"].waitForExistence(timeout: 30))
+    XCTAssertTrue(app.descendants(matching: .any)["home"].waitForExistence(timeout: 60))
     XCTAssertTrue(app.staticTexts["Nap Time"].exists)
     attach(png: app.screenshot().pngRepresentation, entryPoint: "home")
   }

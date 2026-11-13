@@ -6,11 +6,9 @@
 | Linear project | `NapTime` |
 | GitHub repo | `vanoostrum/nap-time` |
 | Base branch | `main` |
-| Required CI checks | none yet |
-| Verify skill | none yet |
-| App driver skill | none yet |
-
-The walking skeleton replaces the three `none yet` values with `Core (Linux)`, `App (iOS)`, `Screenshots`; `verify`; and `drive-app`.
+| Required CI checks | `Core (Linux)`, `App (iOS)`, `Screenshots` |
+| Verify skill | `verify` |
+| App driver skill | `drive-app` |
 
 ## Standing notes
 

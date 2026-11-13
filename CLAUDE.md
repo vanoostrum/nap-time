@@ -1,6 +1,6 @@
 # Nap Time
 
-An iOS app to track a young child's sleep. Swift 6 with strict concurrency, SwiftUI, minimum iOS 27.0.
+An iOS app to track a young child's sleep. Swift 6 with strict concurrency, SwiftUI, minimum iOS 26.0. GitHub's macOS runners have no Xcode 27 yet, so CI builds with the Xcode in `.xcode-version`; raise both to 27 when they do.
 
 @.claude/craft.md
 
@@ -17,4 +17,32 @@ If a skill is unknown, read `.claude/skills/<name>/SKILL.md` and follow it.
 - `.xcode-version` and `.swift-version` change together, in one ticket.
 - The code holds no personal data. The repo is public.
 
-The walking skeleton completes these rules with the build and test commands.
+
+## Build and test
+
+On Linux (the cloud agents) and on macOS:
+
+```bash
+bash scripts/cloud-setup.sh          # from the folder that holds the nap-time checkout; installs Swift from .swift-version
+scripts/verify.sh                    # lint, then build and test Core
+swift format lint --strict --recursive .
+swift format -i --recursive <paths>  # fix the format
+swift build --package-path Packages/Core
+swift test --package-path Packages/Core
+```
+
+On a Mac with the Xcode in `.xcode-version`:
+
+```bash
+brew install xcodegen
+xcodegen generate                    # makes NapTime.xcodeproj from project.yml
+open NapTime.xcodeproj               # run the NapTime scheme in an iPhone simulator
+xcodebuild test -project NapTime.xcodeproj -scheme NapTime \
+  -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:NapTimeStoreTests
+xcodebuild test -project NapTime.xcodeproj -scheme NapTime \
+  -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:NapTimeUITests
+```
+
+In CI, the workflow `CI` (`.github/workflows/ci.yml`) runs the checks `Core (Linux)`, `App (iOS)`, and `Screenshots`. A cloud agent proves CI with the `verify` skill and screens with the `drive-app` skill.
+
+Test mode: launch the app with `--test-mode`, and optionally `--now <ISO 8601 date with a UTC offset>` and `--location <lat>,<lon>`. Core's `LaunchArguments` parses them.

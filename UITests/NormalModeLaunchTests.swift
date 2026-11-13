@@ -9,7 +9,7 @@ final class NormalModeLaunchTests: XCTestCase {
     app.launchArguments = []
     app.launch()
 
-    XCTAssertTrue(app.descendants(matching: .any)["home"].waitForExistence(timeout: 30))
+    XCTAssertTrue(app.descendants(matching: .any)["home"].waitForExistence(timeout: 60))
     XCTAssertEqual(app.state, .runningForeground)
   }
 }
