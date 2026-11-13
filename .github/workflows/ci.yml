@@ -1,0 +1,134 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  core-linux:
+    name: Core (Linux)
+    # Swift 6.3 has no build for Ubuntu 26.04, which ubuntu-latest now is.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Cache Swift
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/swiftly
+          key: swiftly-${{ runner.os }}-${{ hashFiles('.swift-version') }}
+      # The same script that sets up the cloud agents. It runs from the folder that holds the checkout.
+      - name: Install Swift from .swift-version
+        working-directory: ..
+        run: |
+          bash "$(basename "$GITHUB_WORKSPACE")/scripts/cloud-setup.sh"
+          echo "$HOME/.local/share/swiftly/bin" >> "$GITHUB_PATH"
+      - name: Check the Swift version
+        run: swift --version | tee /dev/stderr | grep -F "Swift version $(cut -d. -f1,2 .swift-version)"
+      - name: Lint
+        run: swift format lint --strict --recursive .
+      - name: Build Core
+        run: swift build --package-path Packages/Core
+      - name: Test Core
+        run: swift test --package-path Packages/Core
+
+  app-ios:
+    name: App (iOS)
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - name: Select Xcode and simulator
+        run: scripts/ci-select-xcode.sh >> "$GITHUB_ENV"
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate the Xcode project
+        run: xcodegen generate
+      - name: Test NapTimeStore
+        run: |
+          set -o pipefail
+          xcodebuild test -project NapTime.xcodeproj -scheme NapTime \
+            -destination "id=$SIMULATOR_ID" -only-testing:NapTimeStoreTests \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Test Core on iOS
+        working-directory: Packages/Core
+        run: |
+          set -o pipefail
+          xcodebuild -list
+          scheme="$(xcodebuild -list -json | python3 -c 'import json,sys; s=json.load(sys.stdin)["workspace"]["schemes"]; print("Core-Package" if "Core-Package" in s else "Core")')"
+          xcodebuild test -scheme "$scheme" -destination "id=$SIMULATOR_ID" CODE_SIGNING_ALLOWED=NO
+
+  screenshots:
+    name: Screenshots
+    runs-on: macos-26
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    env:
+      HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Select Xcode and simulator
+        run: scripts/ci-select-xcode.sh >> "$GITHUB_ENV"
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate the Xcode project
+        run: xcodegen generate
+      # A fixed status bar, so home.png is the same on every run (ADR 0003).
+      - name: Boot the simulator with a fixed status bar
+        run: |
+          xcrun simctl boot "$SIMULATOR_ID" || true
+          xcrun simctl bootstatus "$SIMULATOR_ID" -b
+          xcrun simctl status_bar "$SIMULATOR_ID" override --time "09:41" --dataNetwork wifi --wifiMode active \
+            --wifiBars 3 --cellularMode notSupported --batteryState charged --batteryLevel 100
+      - name: Run the UI tests
+        id: uitests
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          xcodebuild test -project NapTime.xcodeproj -scheme NapTime \
+            -destination "id=$SIMULATOR_ID" -only-testing:NapTimeUITests \
+            -resultBundlePath build/Screenshots.xcresult \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Export the screenshots
+        if: always()
+        run: python3 scripts/export-screenshots.py build/Screenshots.xcresult build/screenshots
+      - name: Upload the screenshots artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: build/screenshots
+          if-no-files-found: warn
+      # The cloud agents cannot reach the artifact host, so the PNG files also go to a branch.
+      - name: Push the screenshots to screenshots/<branch>
+        if: always() && github.event.pull_request.head.repo.fork != true
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          dir="$(mktemp -d)"
+          mkdir -p "$dir/$HEAD_SHA"
+          cp build/screenshots/* "$dir/$HEAD_SHA/" 2>/dev/null || true
+          cd "$dir"
+          git init -q -b screenshots
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q --allow-empty -m "Screenshots for $HEAD_SHA (run $GITHUB_RUN_ID)"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "HEAD:refs/heads/screenshots/${HEAD_BRANCH}"
+          echo "Pushed to screenshots/${HEAD_BRANCH}: $(ls "$HEAD_SHA" | tr '\n' ' ')"
+      - name: Fail when a UI test failed
+        if: steps.uitests.outcome != 'success'
+        run: |
+          echo "The UI tests failed. See the step 'Run the UI tests'."
+          exit 1

@@ -19,3 +19,7 @@ _Avoid_: snapshots, golden images
 **Family store**:
 The on-device store in the App Group container, which the app, the widget, and the App Intents share, and which syncs to iCloud.
 _Avoid_: database, cache
+
+**Entry point**:
+A screen or view that `drive-app` expects a screenshot of, such as `home` or `live-activity`. Each entry point gives one PNG in the `screenshots` artifact, named after it.
+_Avoid_: screen ID, route
