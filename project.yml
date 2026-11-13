@@ -1,0 +1,118 @@
+name: NapTime
+options:
+  bundleIdPrefix: nl.clearblocks
+  deploymentTarget:
+    iOS: "27.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+settings:
+  base:
+    DEVELOPMENT_TEAM: 2SUL28U5Y7
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    IPHONEOS_DEPLOYMENT_TARGET: "27.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+packages:
+  Core:
+    path: Packages/Core
+targets:
+  NapTime:
+    type: application
+    platform: iOS
+    sources:
+      - App
+    dependencies:
+      - package: Core
+      - target: NapTimeStore
+      - target: NapTimeWidget
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Nap Time
+        UILaunchScreen: {}
+        NSSupportsLiveActivities: true
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+    entitlements:
+      path: App/NapTime.entitlements
+      properties:
+        aps-environment: development
+        com.apple.developer.icloud-container-identifiers: [iCloud.nl.clearblocks.naptime]
+        com.apple.developer.icloud-services: [CloudKit]
+        com.apple.security.application-groups: [group.nl.clearblocks.naptime]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: nl.clearblocks.naptime
+  NapTimeWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Widget
+    dependencies:
+      - target: NapTimeStore
+        embed: false
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: Nap Time
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Widget/NapTimeWidget.entitlements
+      properties:
+        com.apple.security.application-groups: [group.nl.clearblocks.naptime]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: nl.clearblocks.naptime.widget
+  NapTimeStore:
+    type: framework
+    platform: iOS
+    sources:
+      - Store
+    dependencies:
+      - package: Core
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: nl.clearblocks.naptime.store
+        GENERATE_INFOPLIST_FILE: YES
+  NapTimeStoreTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - StoreTests
+    dependencies:
+      - target: NapTimeStore
+      - package: Core
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: nl.clearblocks.naptime.storetests
+        GENERATE_INFOPLIST_FILE: YES
+  NapTimeUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - UITests
+      - path: Widget/LiveActivityView.swift
+    dependencies:
+      - target: NapTime
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: nl.clearblocks.naptime.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: NapTime
+schemes:
+  NapTime:
+    build:
+      targets:
+        NapTime: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - NapTimeStoreTests
+        - NapTimeUITests
