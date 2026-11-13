@@ -83,6 +83,13 @@ jobs:
         run: brew install xcodegen
       - name: Generate the Xcode project
         run: xcodegen generate
+      # A fixed status bar, so home.png is the same on every run (ADR 0003).
+      - name: Boot the simulator with a fixed status bar
+        run: |
+          xcrun simctl boot "$SIMULATOR_ID" || true
+          xcrun simctl bootstatus "$SIMULATOR_ID" -b
+          xcrun simctl status_bar "$SIMULATOR_ID" override --time "09:41" --dataNetwork wifi --wifiMode active \
+            --wifiBars 3 --cellularMode notSupported --batteryState charged --batteryLevel 100
       - name: Run the UI tests
         id: uitests
         continue-on-error: true

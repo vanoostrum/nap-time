@@ -45,6 +45,14 @@ else
 fi
 swiftly use --global-default "$version" > /dev/null
 
+# Non-interactive shells skip ~/.bashrc, so also link the Swift tools into /usr/local/bin.
+for tool in "$SWIFTLY_BIN_DIR"/swift "$SWIFTLY_BIN_DIR"/swiftc "$SWIFTLY_BIN_DIR"/swiftly "$SWIFTLY_BIN_DIR"/swift-*; do
+  name="$(basename "$tool")"
+  target="/usr/local/bin/$name"
+  if [ -e "$target" ] && [ ! -L "$target" ]; then continue; fi
+  $sudo ln -sf "$tool" "$target"
+done
+
 profile_line=". \"$SWIFTLY_HOME_DIR/env.sh\""
 for rc in "$HOME/.bashrc" "$HOME/.profile"; do
   touch "$rc"
