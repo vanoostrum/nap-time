@@ -15,7 +15,8 @@ permissions:
 jobs:
   core-linux:
     name: Core (Linux)
-    runs-on: ubuntu-latest
+    # Swift 6.3 has no build for Ubuntu 26.04, which ubuntu-latest now is.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5

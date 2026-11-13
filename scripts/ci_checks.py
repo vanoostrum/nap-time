@@ -64,7 +64,7 @@ def report_failure(run):
         lines = [re.sub(r"^\S+Z ", "", line) for line in lines]
         # The first "##[error]" line ends the failed step. Show the error lines before it, or its last lines.
         end = next((i for i, line in enumerate(lines) if line.startswith("##[error]")), len(lines) - 1)
-        errors = [line for line in lines[: end + 1] if re.search(r": error:|error:|\*\* .* FAILED \*\*|✘", line)]
+        errors = [line for line in lines[: end + 1] if re.search(r"error:|\*\* .* FAILED \*\*|✘", line, re.IGNORECASE)]
         print("Log lines:")
         for line in (errors[-40:] + [lines[end]]) if errors else lines[max(0, end - 40) : end + 1]:
             print("  " + line)
