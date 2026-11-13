@@ -22,6 +22,7 @@ final class EntryPointTests: XCTestCase {
   /// A UI test cannot open a Live Activity, so it renders the Lock Screen view (ADR 0003).
   @MainActor
   func testLiveActivity() throws {
+    XCTFail("Scratch: a failing UI test on purpose")
     let renderer = ImageRenderer(content: LiveActivityView().frame(width: 360, height: 120))
     renderer.scale = 3
     let image = try XCTUnwrap(renderer.uiImage, "ImageRenderer gave no image")
