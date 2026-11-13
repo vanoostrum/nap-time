@@ -4,5 +4,5 @@ Both parents must see and edit one family's data from two Apple IDs, with no ser
 
 ## Consequences
 
-- The store code imports Core Data, so it lives in the app target, not in Core. Core gets plain value types, and the app maps them to and from managed objects.
+- The store code imports Core Data, so it cannot live in Core. It lives in a framework target, `NapTimeStore`, defined in `project.yml`. The app `NapTime` and the widget extension `NapTimeWidget` both link it, so the widget and the "awake" App Intent open the same family store in the App Group. `NapTimeStore` depends on Core. Core gets plain value types, and `NapTimeStore` maps them to and from managed objects.
 - Sharing between two Apple IDs cannot be tested on the simulator. The first real test is on TestFlight, after v1.
