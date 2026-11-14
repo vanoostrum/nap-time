@@ -543,3 +543,10 @@ button, input, select { font-family: inherit; }
 }
 .island svg { width: 20px; height: 20px; fill: var(--moon); }
 .caption { margin-top: 10px; font-size: 14px; opacity: 0.8; }
+
+/* Edit child: the chosen photo in the picker */
+.photo-pick .photo.filled { border: 6px solid var(--white); background: var(--avatar-day-1); font-size: 52px; font-weight: 800; color: var(--navy); }
+
+/* Charts with no sleeps */
+.card.empty { gap: 12px; }
+.card.empty p { font-size: 18px; line-height: 1.3; }
