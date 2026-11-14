@@ -15,25 +15,29 @@ export PATH="$SWIFTLY_BIN_DIR:$PATH"
 # The marker is written only after every install step, so a stopped install never counts as done.
 marker="$SWIFTLY_HOME_DIR/.done-$version"
 
+# swiftly writes a .swift-version in its current folder or a parent, so it runs from a new folder
+# outside the checkout. All paths into the checkout go through repo_dir.
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+cd "$work"
+
 if [ -f "$marker" ]; then
   echo "cloud-setup: Swift $version is installed"
 else
   echo "cloud-setup: installing swiftly and Swift $version from scratch"
   rm -rf "$SWIFTLY_HOME_DIR"
-  tmp="$(mktemp -d)"
-  curl -fsSL "https://download.swift.org/swiftly/linux/swiftly-$(uname -m).tar.gz" -o "$tmp/swiftly.tar.gz"
-  tar -xzf "$tmp/swiftly.tar.gz" -C "$tmp"
-  "$tmp/swiftly" init --assume-yes --quiet-shell-followup --skip-install --no-modify-profile
-  rm -rf "$tmp"
+  curl -fsSL "https://download.swift.org/swiftly/linux/swiftly-$(uname -m).tar.gz" -o "$work/swiftly.tar.gz"
+  tar -xzf "$work/swiftly.tar.gz" -C "$work"
+  "$work/swiftly" init --assume-yes --quiet-shell-followup --skip-install --no-modify-profile
 
-  post_install="$(mktemp)"
-  "$SWIFTLY_BIN_DIR/swiftly" install --assume-yes --use --post-install-file "$post_install" "$version"
+  # No --use: it would write .swift-version. The swiftly use below selects the version.
+  post_install="$work/post-install.sh"
+  "$SWIFTLY_BIN_DIR/swiftly" install --assume-yes --post-install-file "$post_install" "$version"
   if [ -s "$post_install" ]; then
     echo "cloud-setup: installing the system packages that Swift needs"
     $sudo apt-get update -qq
     $sudo bash "$post_install"
   fi
-  rm -f "$post_install"
   touch "$marker"
 fi
 # --assume-yes lets swiftly repair a broken tool link in its bin folder.
@@ -53,4 +57,6 @@ for rc in "$HOME/.bashrc" "$HOME/.profile"; do
   grep -qxF "$profile_line" "$rc" || printf '\n%s\n' "$profile_line" >> "$rc"
 done
 
+# The swift proxy reads .swift-version from its current folder, so ask from the checkout.
+cd "$repo_dir"
 swift --version

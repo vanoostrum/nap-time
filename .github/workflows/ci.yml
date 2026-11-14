@@ -31,6 +31,16 @@ jobs:
         run: |
           bash scripts/cloud-setup.sh
           echo "$HOME/.local/share/swiftly/bin" >> "$GITHUB_PATH"
+      # swiftly can rewrite .swift-version (CRAFT-42). The install must leave the checkout unchanged.
+      - name: Check that the Swift install left the checkout clean
+        run: |
+          changes="$(git status --porcelain)"
+          if [ -n "$changes" ]; then
+            echo "The Swift install changed the checkout:"
+            echo "$changes"
+            git diff
+            exit 1
+          fi
       - name: Check the Swift version
         run: swift --version | tee /dev/stderr | grep -F "Swift version $(cut -d. -f1,2 .swift-version)"
       - name: Lint
