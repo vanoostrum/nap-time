@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Charts</title>
+<link rel="stylesheet" href="../../gallery.css">
+</head>
+<body>
+<main class="screen plain">
+<header class="week-head">
+<button class="round-arrow" aria-label="Previous week"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+<div class="title"><h1>Mila's week</h1><span>Mon 2 – Sun 8 Nov</span></div>
+<button class="round-arrow" aria-label="Next week"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+</header>
+<div class="stats">
+<div class="stat"><span class="label">Average</span><span class="value">12 h 09 m</span><span class="note">range 11–14 h</span></div>
+<div class="stat"><span class="label">In range</span><span class="value">4 of 7 days</span><span class="note">bed ~19:45 · up ~06:30</span></div>
+</div>
+<section class="card">
+<h2>Hours per day</h2>
+<div class="bars"><div class="band" style="--lo:11;--hi:14" aria-hidden="true"></div>
+<button class="bar" style="--h:12.60" aria-label="Monday 2 Nov, 12 h 36 m"></button>
+<button class="bar little" style="--h:10.20" aria-label="Tuesday 3 Nov, 10 h 12 m"></button>
+<button class="bar" style="--h:12.10" aria-label="Wednesday 4 Nov, 12 h 06 m"></button>
+<button class="bar" style="--h:13.00" aria-label="Thursday 5 Nov, 13 h 00 m"></button>
+<button class="bar little" style="--h:10.80" aria-label="Friday 6 Nov, 10 h 48 m"></button>
+<button class="bar" style="--h:11.90" aria-label="Saturday 7 Nov, 11 h 54 m"></button>
+<button class="bar much" style="--h:14.40" aria-label="Sunday 8 Nov, 14 h 24 m"></button>
+</div>
+<div class="days"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+<div class="legend"><span><i></i>in range</span><span><i class="little"></i>too little</span><span><i class="much"></i>too much</span></div>
+</section>
+<section class="card">
+<h2>When Mila slept</h2>
+<button class="row" aria-label="Monday 2 Nov details"><span class="d">Mon</span><span class="track"><span class="seg" style="--from:1.75;--len:11.1"></span><span class="seg nap" style="--from:19;--len:1.5"></span></span></button>
+<button class="row" aria-label="Tuesday 3 Nov details"><span class="d">Tue</span><span class="track"><span class="seg" style="--from:2.9;--len:9.3"></span><span class="seg nap" style="--from:19.5;--len:0.9"></span></span></button>
+<button class="row" aria-label="Wednesday 4 Nov details"><span class="d">Wed</span><span class="track"><span class="seg" style="--from:1.5;--len:11.0"></span><span class="seg nap" style="--from:18.8;--len:1.1"></span></span></button>
+<button class="row" aria-label="Thursday 5 Nov details"><span class="d">Thu</span><span class="track"><span class="seg" style="--from:1.0;--len:11.5"></span><span class="seg nap" style="--from:19;--len:1.5"></span></span></button>
+<button class="row" aria-label="Friday 6 Nov details"><span class="d">Fri</span><span class="track"><span class="seg" style="--from:3.2;--len:9.6"></span><span class="seg nap" style="--from:20;--len:1.2"></span></span></button>
+<button class="row" aria-label="Saturday 7 Nov details"><span class="d">Sat</span><span class="track"><span class="seg" style="--from:2.0;--len:10.4"></span><span class="seg nap" style="--from:19.2;--len:1.5"></span></span></button>
+<button class="row" aria-label="Sunday 8 Nov details"><span class="d">Sun</span><span class="track"><span class="seg" style="--from:0.8;--len:12.4"></span><span class="seg nap" style="--from:18.5;--len:2.0"></span></span></button>
+<div class="axis"><span>18:00</span><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span></div>
+</section>
+<nav class="layer tabs"><a class="tab" href="../home/day.html">Today</a><a class="tab current" href="../charts/week.html">Charts</a></nav>
+</main>
+</body>
+</html>
