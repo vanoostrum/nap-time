@@ -566,3 +566,6 @@ button, input, select { font-family: inherit; }
 .confirm h2 { font-size: 26px; }
 .confirm p { font-size: 17px; line-height: 1.3; }
 .confirm .primary.destructive { background: var(--too-little); box-shadow: 0 6px 0 #8a2a1b; margin-top: 6px; }
+
+/* Edit sleep: times that cannot be saved */
+.field .hint.problem { color: var(--too-little); font-weight: 700; }
