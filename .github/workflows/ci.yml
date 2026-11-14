@@ -24,12 +24,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.local/share/swiftly
-          key: swiftly-${{ runner.os }}-${{ hashFiles('.swift-version') }}
-      # The same script that sets up the cloud agents. It runs from the folder that holds the checkout.
+          # -v2: caches from before the done marker of cloud-setup.sh do not count as an install.
+          key: swiftly-${{ runner.os }}-${{ hashFiles('.swift-version') }}-v2
+      # The same script that installs Swift when a cloud agent runs scripts/verify.sh.
       - name: Install Swift from .swift-version
-        working-directory: ..
         run: |
-          bash "$(basename "$GITHUB_WORKSPACE")/scripts/cloud-setup.sh"
+          bash scripts/cloud-setup.sh
           echo "$HOME/.local/share/swiftly/bin" >> "$GITHUB_PATH"
       - name: Check the Swift version
         run: swift --version | tee /dev/stderr | grep -F "Swift version $(cut -d. -f1,2 .swift-version)"

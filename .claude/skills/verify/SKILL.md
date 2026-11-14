@@ -15,9 +15,10 @@ Run:
 scripts/verify.sh
 ```
 
-It runs, in order, and stops at the first failed step:
+It runs from any folder. It runs, in order, and stops at the first failed step:
 
-1. `swift --version`. It must print the version in `.swift-version`. If `swift` is missing, run `bash scripts/cloud-setup.sh` from the folder that holds the `nap-time` checkout, then `. ~/.local/share/swiftly/env.sh`.
+0. On Linux only: `Install Swift`. When `swift` is missing or is not the version in `.swift-version`, it runs `bash scripts/cloud-setup.sh`, which installs that version. The first verify in a new cloud session does this and takes a few minutes longer. When Swift is right, the step does not run.
+1. `Swift version`: `swift --version`. On Linux, it must print the version in `.swift-version`. On macOS, Swift comes with Xcode, and the step only prints it.
 2. The lint: `swift format lint --strict --recursive .`. To fix the format, run `swift format -i --recursive <paths>`.
 3. `swift build --package-path Packages/Core`.
 4. `swift test --package-path Packages/Core`.
