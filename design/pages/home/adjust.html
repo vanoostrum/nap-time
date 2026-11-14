@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home just after a tap</title>
+<link rel="stylesheet" href="../../gallery.css">
+</head>
+<body>
+<main class="screen day">
+<div class="cloud one" aria-hidden="true"></div>
+<div class="cloud two" aria-hidden="true"></div>
+<div class="sun high" aria-hidden="true"></div>
+<svg class="hills" viewBox="0 0 390 324" preserveAspectRatio="none" aria-hidden="true"><path class="back" d="M0 70 C 80 20, 170 30, 240 55 S 360 40, 390 30 L390 324 L0 324 Z"/><path class="front" d="M0 120 C 90 60, 200 70, 290 95 S 370 110, 390 100 L390 324 L0 324 Z"/></svg>
+<div class="layer switcher">
+<button class="avatar selected" aria-label="Mila, selected">M</button>
+<button class="avatar two" aria-label="Noah">N</button>
+<button class="avatar add" aria-label="Add a child">+</button>
+<button class="icon-button gear" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+</div>
+<div class="layer child">
+<div class="photo" role="img" aria-label="Mila's photo">M</div>
+<h1>Mila is awake</h1>
+<p>since 06:55 · 1 h 30 m slept today</p>
+</div>
+<div class="layer actions">
+<span class="saved">Saved: woke up at 06:55</span>
+<button class="adjust">Woke earlier? Adjust <span class="countdown">5 s</span></button>
+<button class="main-button" aria-label="Mila fell asleep"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>Sleep time</button>
+<a class="link" href="../sleep/edit.html">Add a sleep from earlier</a>
+</div>
+<nav class="layer tabs"><a class="tab current" href="../home/day.html">Today</a><a class="tab" href="../charts/week.html">Charts</a></nav>
+</main>
+</body>
+</html>
