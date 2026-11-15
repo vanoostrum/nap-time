@@ -448,6 +448,7 @@ button, input, select { font-family: inherit; }
 .verdict { font-size: 15px; font-weight: 800; color: var(--white); background: var(--in-range); border-radius: 999px; padding: 4px 12px; }
 .verdict.little { background: var(--too-little); }
 .verdict.much { background: var(--too-much); }
+.verdict.so-far { background: var(--white); color: var(--navy); border: 2px solid var(--so-far); }
 .sleep-item { display: flex; align-items: center; gap: 12px; background: var(--track); border-radius: 22px; padding: 12px 14px; }
 .sleep-item .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--navy); }
 .sleep-item .dot.nap { background: var(--nap); }
