@@ -585,3 +585,8 @@ button, input, select { font-family: inherit; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+
+/* Share card on Settings: title and subtitle */
+.list .item.share { padding: 16px; }
+.list .item.share .title { font-size: 21px; font-weight: 700; line-height: 1.2; }
+.list .item.share .small { margin-top: 4px; font-weight: 500; opacity: 0.8; }
