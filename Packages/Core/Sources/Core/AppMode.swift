@@ -16,19 +16,21 @@ public enum AppMode: Equatable, Sendable {
   public var areNotificationsEnabled: Bool { !usesInMemoryStore }
 }
 
-/// The fixed clock, time zone, and location of test mode.
+/// The fixed clock, time zone, location, and seed of test mode.
 public struct TestEnvironment: Equatable, Sendable {
   public var now: Date
   public var timeZone: TimeZone
   public var location: Coordinate
+  public var seed: Seed
 
-  public init(now: Date, timeZone: TimeZone, location: Coordinate) {
+  public init(now: Date, timeZone: TimeZone, location: Coordinate, seed: Seed = .none) {
     self.now = now
     self.timeZone = timeZone
     self.location = location
+    self.seed = seed
   }
 
-  /// 2026-06-21T10:00:00+02:00, in Amsterdam.
+  /// 2026-06-21T10:00:00+02:00, in Amsterdam, with no children.
   public static let standard = TestEnvironment(
     now: Date(timeIntervalSince1970: 1_782_028_800),
     timeZone: TimeZone(identifier: "Europe/Amsterdam")!,
