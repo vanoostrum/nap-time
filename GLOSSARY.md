@@ -9,11 +9,11 @@ The local Swift package `Packages/Core`, which holds all pure logic and imports 
 _Avoid_: domain module, model layer
 
 **Test mode**:
-The app mode that CI starts with launch arguments: an in-memory store with seeded data, a fixed clock, and a fixed location, with CloudKit and notifications off.
+The app mode that CI starts with launch arguments: an in-memory store with the data of a named seed, a fixed clock, and a fixed location, with CloudKit and notifications off.
 _Avoid_: demo mode, mock mode, UI test mode
 
 **Screenshot evidence**:
-The PNG files in the `screenshots` artifact of the `Screenshots` CI job, one per entry point. They are how an agent proves a screen.
+The PNG files that the `Screenshots` CI job saves, one per entry point. The job pushes them to the branch `screenshots/<branch>`, in the folder `<head sha>/`, and uploads them as the `screenshots` artifact. Cloud agents read them from the branch, because they cannot reach the artifact host. They are how an agent proves a screen.
 _Avoid_: snapshots, golden images
 
 **Family store**:
@@ -21,7 +21,7 @@ The on-device store in the App Group container, which the app, the widget, and t
 _Avoid_: database, cache
 
 **Entry point**:
-A screen or view that `drive-app` expects a screenshot of, such as `home` or `live-activity`. Each entry point gives one PNG in the `screenshots` artifact, named after it.
+A screen or view that `drive-app` expects a screenshot of, such as `home` or `add-child`. Each entry point gives one PNG named after it, in `screenshots/<branch>/<head sha>/`.
 _Avoid_: screen ID, route
 
 ### Children and sleep

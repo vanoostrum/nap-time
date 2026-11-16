@@ -11,12 +11,21 @@ The cloud agents have no simulator. The `Screenshots` CI job runs the UI tests i
 
 An entry point is a screen or view that this skill expects a screenshot of. This list is the only source: `scripts/drive_app.py` reads it. Each ticket that adds an entry point adds a line here, and a UI test that saves `<entry point>.png`.
 
-- `home`: the placeholder home screen. Test: `EntryPointTests.testHome`, in test mode.
+Each one starts the app with `--test-mode`, its seed, and the default test time (21 June 2026 10:00 +02:00).
+
+- `add-child`: `--seed none`. "Add your child" as the app opens, empty. Page `child/add-empty.html`. Test: `EntryPointTests.testAddChild`.
+- `add-child-filled`: `--seed none`. Types "Mila", sets the birthdate wheel to 12 March 2025, and closes the birthdate sheet. Page `child/add.html`. Test: `EntryPointTests.testAddChildFilled`.
+- `home`: `--seed family`, with Mila selected. The day sky, the child switcher with "+", and "Mila is awake". Page `home/day.html`. Test: `EntryPointTests.testHome`.
+- `add-another-child`: `--seed family`. Taps "+", types "Noah", sets the birthdate wheel to 10 February 2022, and closes the birthdate sheet. Page `child/add-another.html`. Test: `EntryPointTests.testAddAnotherChild`.
+- `edit-child`: `--seed family`. Touches and holds Mila's avatar. Page `child/edit.html`. Test: `EntryPointTests.testEditChild`.
+- `delete-child`: `--seed family`. Opens Edit child for Mila and taps "Delete Mila". Page `child/delete.html`. Test: `EntryPointTests.testDeleteChild`.
+- `home-long-name`: `--seed long-name`. The home screen with "Maximiliana Rosalind Pepperpot is awake". No gallery page: check that the whole name shows, with no ellipsis. Test: `EntryPointTests.testHomeLongName`.
+- `delete-child-long-name`: `--seed long-name`. Opens Edit child and taps "Delete Maximiliana Rosalind Pepperpot". No gallery page: check that the title, the body, and the button show the whole name, with no ellipsis. Test: `EntryPointTests.testDeleteChildLongName`.
 - `live-activity`: the Lock Screen view of the placeholder Live Activity, rendered with `ImageRenderer` (ADR 0003). Test: `EntryPointTests.testLiveActivity`.
 
 ## Add an entry point
 
-1. In `NapTimeUITests`, add a test that launches the app with `--test-mode` (and `--now` or `--location` if the screen needs them), opens the screen, and calls `attach(png:entryPoint:)` with the entry point name. For a view that a UI test cannot open, render it with `ImageRenderer`, and add its source file to the `NapTimeUITests` sources in `project.yml`.
+1. In `NapTimeUITests`, add a test that launches the app with `AppDriver.launch(seed:)` (add `--now` or `--location` if the screen needs them), opens the screen, and calls `attachScreenshot(_:to:)` with the entry point name. The seeds are `none`, `family`, and `long-name`, in Core's `Seed`. For a view that a UI test cannot open, render it with `ImageRenderer`, and add its source file to the `NapTimeUITests` sources in `project.yml`.
 2. Add the entry point to the list above.
 
 ## Run

@@ -33,6 +33,7 @@ targets:
       properties:
         CFBundleDisplayName: Nap Time
         UILaunchScreen: {}
+        UIAppFonts: [Baloo2-SemiBold.ttf, Baloo2-Bold.ttf, Baloo2-ExtraBold.ttf]
         NSSupportsLiveActivities: true
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
     entitlements:
