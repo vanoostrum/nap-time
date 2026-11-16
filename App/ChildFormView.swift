@@ -31,6 +31,7 @@ struct ChildFormView: View {
   @State private var draftDate = Date()
   @State private var confirmsDelete = false
   @State private var isSaving = false
+  @State private var isLoadingPhoto = false
   @State private var errorText: String?
   @FocusState private var nameIsFocused: Bool
 
@@ -110,7 +111,7 @@ struct ChildFormView: View {
     .sheet(isPresented: $showsDatePicker) { datePickerSheet }
     .onChange(of: pickedItem) { _, item in
       guard let item else { return }
-      Task { pickedPhoto = try? await item.loadTransferable(type: Data.self) }
+      loadPhoto(item)
     }
     .accessibilityElement(children: .contain)
     .accessibilityIdentifier(savedChild == nil ? "add-child" : "edit-child")
@@ -235,7 +236,8 @@ struct ChildFormView: View {
     VStack(spacing: 12) {
       Button(primaryTitle) { save() }
         .buttonStyle(PrimaryButtonStyle())
-        .disabled(validName == nil || birthDate == nil || isSaving)
+        // Wait for a picked photo, so Save never drops it.
+        .disabled(validName == nil || birthDate == nil || isSaving || isLoadingPhoto)
         .accessibilityIdentifier("save")
       if let savedChild {
         Button("Delete \(savedChild.name)") { confirmsDelete = true }
@@ -308,6 +310,21 @@ struct ChildFormView: View {
     let day = birthDate ?? today
     let clamped = min(max(day, limits.lowerBound), limits.upperBound)
     return clamped.date(in: calendar)
+  }
+
+  /// Loads the picked photo. Save stays disabled until the load ends.
+  private func loadPhoto(_ item: PhotosPickerItem) {
+    isLoadingPhoto = true
+    errorText = nil
+    Task {
+      do {
+        guard let data = try await item.loadTransferable(type: Data.self) else { throw CocoaError(.fileReadUnknown) }
+        pickedPhoto = data
+      } catch {
+        errorText = "Nap Time could not load this photo. Try another one."
+      }
+      isLoadingPhoto = false
+    }
   }
 
   private func save() {
