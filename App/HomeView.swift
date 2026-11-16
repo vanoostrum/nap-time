@@ -62,8 +62,12 @@ struct HomeView: View {
       .frame(width: 48, height: 48)
       .overlay(Circle().strokeBorder(selected ? Theme.navy : .clear, lineWidth: 3))
       .contentShape(Circle())
-      .onTapGesture { onSelect(child.id) }
-      .onLongPressGesture(minimumDuration: 0.5) { onEdit(child.id) }
+      // One gesture, so a touch and hold never also counts as a tap.
+      .gesture(
+        LongPressGesture(minimumDuration: 0.5)
+          .onEnded { _ in onEdit(child.id) }
+          .exclusively(before: TapGesture().onEnded { onSelect(child.id) })
+      )
       .accessibilityElement()
       .accessibilityLabel(child.name)
       .accessibilityIdentifier("avatar")
