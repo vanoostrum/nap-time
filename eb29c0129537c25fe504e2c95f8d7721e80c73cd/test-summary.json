@@ -1,0 +1,9 @@
+{
+  "result": "Failed",
+  "failedTests": [
+    "TemporaryAlwaysFailsTests/testFailsOnEveryAttempt()"
+  ],
+  "retriedTests": [
+    "TemporaryRetryTests/testFailsOnlyOnTheFirstAttempt()"
+  ]
+}
