@@ -18,13 +18,19 @@ public enum Seed: String, CaseIterable, Sendable {
   /// `family`, with only Mila's night from 14 November 2026 19:48 to 15 November 06:40.
   /// Pass `--now 2026-11-15T08:00:00+01:00` (sunrise).
   case winterMorning = "winter-morning"
+  /// `family`, with Mila's sleeps from Monday 2 to Sunday 8 November 2026 (`charts/week.html`) and Noah's nap
+  /// on Tuesday 3 November. Pass `--now 2026-11-08T19:30:00+01:00`.
+  case week
+  /// `week`, with Mila's sleeps from the sleep day Monday 9 November to the morning of Wednesday 11 November
+  /// (`charts/week-today.html`). Pass `--now 2026-11-11T10:00:00+01:00`.
+  case weekToday = "week-today"
 
   /// The children, in the order that test mode adds them.
   public var children: [SeedChild] {
     switch self {
     case .none:
       []
-    case .family, .sleeping, .napping, .evening, .winterMorning:
+    case .family, .sleeping, .napping, .evening, .winterMorning, .week, .weekToday:
       [
         SeedChild(name: "Mila", birthDate: BirthDate(year: 2025, month: 3, day: 12)!, drawsPhoto: false),
         SeedChild(name: "Noah", birthDate: BirthDate(year: 2022, month: 2, day: 10)!, drawsPhoto: true),
@@ -67,7 +73,36 @@ public enum Seed: String, CaseIterable, Sendable {
           childIndex: 0, start: Self.instant("2026-11-14T19:48:00+01:00"),
           end: Self.instant("2026-11-15T06:40:00+01:00"), kind: .night)
       ]
+    case .week:
+      return [lastNight] + Self.milasWeek + [Self.november("2026-11-03T13:00", "2026-11-03T14:30", .nap, child: 1)]
+    case .weekToday:
+      return Seed.week.sleeps + Self.milasWeekSoFar
     }
+  }
+
+  /// Mila's sleeps in the sleep days from Monday 2 to Sunday 8 November 2026, as `charts/week.html` shows.
+  private static let milasWeek = [
+    november("2026-11-01T19:45", "2026-11-02T06:51", .night), november("2026-11-02T13:00", "2026-11-02T14:30", .nap),
+    november("2026-11-02T20:54", "2026-11-03T06:12", .night), november("2026-11-03T13:30", "2026-11-03T14:24", .nap),
+    november("2026-11-03T19:30", "2026-11-04T06:30", .night), november("2026-11-04T12:48", "2026-11-04T13:54", .nap),
+    november("2026-11-04T19:00", "2026-11-05T06:30", .night), november("2026-11-05T13:00", "2026-11-05T14:30", .nap),
+    november("2026-11-05T21:12", "2026-11-06T06:48", .night), november("2026-11-06T14:00", "2026-11-06T15:12", .nap),
+    november("2026-11-06T20:00", "2026-11-07T06:24", .night), november("2026-11-07T13:12", "2026-11-07T14:42", .nap),
+    november("2026-11-07T18:48", "2026-11-08T07:12", .night), november("2026-11-08T12:30", "2026-11-08T14:30", .nap),
+  ]
+
+  /// Mila's sleeps from the sleep day Monday 9 November to the morning of Wednesday 11 November 2026,
+  /// as `charts/week-today.html` shows.
+  private static let milasWeekSoFar = [
+    november("2026-11-08T19:45", "2026-11-09T06:30", .night), november("2026-11-09T13:00", "2026-11-09T14:30", .nap),
+    november("2026-11-09T20:30", "2026-11-10T06:15", .night), november("2026-11-10T13:30", "2026-11-10T14:24", .nap),
+    november("2026-11-10T19:50", "2026-11-11T06:40", .night),
+  ]
+
+  /// A sleep in November 2026, in Amsterdam winter time.
+  private static func november(_ start: String, _ end: String, _ kind: SleepKind, child: Int = 0) -> SeedSleep {
+    SeedSleep(
+      childIndex: child, start: instant("\(start):00+01:00"), end: instant("\(end):00+01:00"), kind: kind)
   }
 
   /// An ISO 8601 date and time with a UTC offset, written in this file.
