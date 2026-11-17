@@ -58,7 +58,8 @@ if [ -f "$marker" ]; then
   echo "cloud-setup: Swift $version is installed"
 else
   echo "cloud-setup: installing Swift $version from scratch"
-  rm -rf "$install_dir"
+  # Also delete unpack folders that a killed run (no exit trap) left behind.
+  rm -rf "$install_dir" "$swift_root/.unpack-$version".*
   mkdir -p "$swift_root"
   work="$(mktemp -d)"
 
