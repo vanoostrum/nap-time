@@ -15,6 +15,10 @@ enum Theme {
   static let nightSkyMid = Color(hex: 0x121A3A)
   static let nightSkyLow = Color(hex: 0x24305E)
   static let star = Color(hex: 0xF2E3B8)
+  static let duskSun = Color(hex: 0xFF8A3D)
+  static let dawnSun = Color(hex: 0xFFB14E)
+  /// The text of the sunset sky.
+  static let duskInk = Color(hex: 0xFFF6E6)
   static let moon = Color(hex: 0xE9C77B)
   static let nightHillBack = Color(hex: 0x22405A)
   static let nightHillFront = Color(hex: 0x183248)
@@ -33,7 +37,7 @@ enum Theme {
   static let scrim = Color(red: 10 / 255, green: 25 / 255, blue: 50 / 255).opacity(0.45)
 
   /// The colour of a child's avatar: the colours alternate in the order of the children.
-  static func avatarColor(at index: Int, sky: Sky = .day) -> Color {
+  static func avatarColor(at index: Int, sky: SkyPhase = .day) -> Color {
     let colors = sky == .night ? avatarNightColors : avatarColors
     return colors[index % colors.count]
   }
@@ -88,7 +92,7 @@ struct ChildPicture: View {
   let child: Child?
   let index: Int
   let letterSize: CGFloat
-  var sky = Sky.day
+  var sky = SkyPhase.day
 
   var body: some View {
     ZStack {

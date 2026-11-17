@@ -78,8 +78,9 @@ struct RootView: View {
             select(child.id)
           })
       } else {
-        // The status line and the totals update every minute. In test mode the clock stays at `--now`.
-        TimelineView(.everyMinute) { context in
+        // The status line and the totals update every minute, and the sky also at its next phase edge.
+        // In test mode the clock stays at `--now`.
+        TimelineView(MinuteAndSkySchedule(timeZone: calendar.timeZone)) { context in
           let now = fixedNow ?? context.date
           let selected = SelectedChild.id(saved: selectedID, in: store.children)
           HomeView(
@@ -242,5 +243,22 @@ enum SeedPhoto {
       context.cgContext.fillEllipse(in: CGRect(x: 60, y: 140, width: 200, height: 70))
     }
     return image.pngData()
+  }
+}
+
+/// Every minute, and at each phase edge of the sky, so the sky changes at the edge itself.
+private struct MinuteAndSkySchedule: TimelineSchedule {
+  let timeZone: TimeZone
+
+  func entries(from startDate: Date, mode: TimelineScheduleMode) -> AnyIterator<Date> {
+    var next: Date? = startDate
+    return AnyIterator {
+      guard let current = next else { return nil }
+      let minute = Calendar.current.nextDate(
+        after: current, matching: DateComponents(second: 0), matchingPolicy: .nextTime)
+      let edge = SkyPhase.nextChange(after: current, in: timeZone)
+      next = minute.map { min($0, edge) } ?? edge
+      return current
+    }
   }
 }

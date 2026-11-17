@@ -48,6 +48,8 @@ final class SleepFlowTests: XCTestCase {
     driver.waitForSky("day")
   }
 
+  /// Criterion 8: at 21:56 on 21 June the sunset phase runs (sunset 22:04). Mila's running night shows night;
+  /// Noah, and Mila right after "Wake up", show the sunset sky.
   @MainActor
   func testEachChildHasTheirOwnSleepAndSky() throws {
     let driver = AppDriver.launch(seed: "sleeping", now: "2026-06-21T21:56:00+02:00")
@@ -57,7 +59,7 @@ final class SleepFlowTests: XCTestCase {
     driver.button("Noah").tap()
     driver.waitFor(driver.text("Noah is awake"))
     XCTAssertTrue(driver.button("Sleep time").exists)
-    driver.waitForSky("day")
+    driver.waitForSky("sunset")
 
     driver.button("Mila").tap()
     driver.waitFor(driver.text("Mila is sleeping"))
@@ -66,6 +68,6 @@ final class SleepFlowTests: XCTestCase {
     driver.waitFor(driver.text("Mila is awake"))
     // The night that just ended counts for the next sleep day, so the evening shows today's total.
     XCTAssertTrue(driver.text("since 21:56 · 11 h 10 m slept today").exists)
-    driver.waitForSky("day")
+    driver.waitForSky("sunset")
   }
 }

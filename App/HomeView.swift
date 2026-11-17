@@ -28,17 +28,15 @@ struct HomeView: View {
   @State private var lastMainButtonTap = Date.distantPast
 
   private var selectedIndex: Int? { children.firstIndex { $0.id == selectedID } }
-  private var sky: Sky { status?.sky ?? .day }
-  private var ink: Color { sky == .night ? Theme.cream : Theme.navy }
+  private var sky: SkyPhase { status?.sky ?? .day }
+  private var colors: HomeColors { .on(sky) }
 
   var body: some View {
     ZStack(alignment: .top) {
       ZStack {
-        if sky == .night {
-          NightSky().transition(.opacity)
-        } else {
-          DaySky().transition(.opacity)
-        }
+        SkyView(phase: sky)
+          .id(sky)
+          .transition(.opacity)
       }
       .accessibilityElement()
       .accessibilityLabel("Sky")
@@ -84,9 +82,9 @@ struct HomeView: View {
       Button(action: onAdd) {
         Text("+")
           .font(.baloo(26, .bold))
-          .foregroundStyle(ink)
+          .foregroundStyle(colors.add)
           .frame(width: 48, height: 48)
-          .overlay(Circle().strokeBorder(ink, style: StrokeStyle(lineWidth: 3, dash: [7, 4])))
+          .overlay(Circle().strokeBorder(colors.add, style: StrokeStyle(lineWidth: 3, dash: [7, 4])))
       }
       .accessibilityLabel("Add a child")
       Spacer(minLength: 0)
@@ -97,7 +95,7 @@ struct HomeView: View {
     let selected = child.id == selectedID
     return ChildPicture(child: child, index: index, letterSize: 22, sky: sky)
       .frame(width: 48, height: 48)
-      .overlay(Circle().strokeBorder(selected ? ink : .clear, lineWidth: 3))
+      .overlay(Circle().strokeBorder(selected ? colors.ring : .clear, lineWidth: 3))
       .contentShape(Circle())
       // One gesture, so a touch and hold never also counts as a tap.
       .gesture(
@@ -117,13 +115,13 @@ struct HomeView: View {
     VStack(spacing: 14) {
       ChildPicture(child: child, index: index, letterSize: 64, sky: sky)
         .frame(width: 150, height: 150)
-        .overlay(Circle().strokeBorder(sky == .night ? Theme.nightTab : .white, lineWidth: 6))
+        .overlay(Circle().strokeBorder(colors.photoBorder, lineWidth: 6))
         .accessibilityLabel("\(child.name)'s photo")
       // Baloo's line height is taller than the gallery's 1.05, so pull the status line up.
       VStack(spacing: -6) {
         Text(status?.heading(name: child.name) ?? "\(child.name) is awake")
           .font(.baloo(40, .extraBold))
-          .foregroundStyle(ink)
+          .foregroundStyle(colors.heading)
           .multilineTextAlignment(.center)
           .fixedSize(horizontal: false, vertical: true)
         if let status {
@@ -138,7 +136,7 @@ struct HomeView: View {
   @ViewBuilder private func statusLine(_ line: String) -> some View {
     let text = Text(line)
       .font(.baloo(20, .semiBold))
-      .foregroundStyle(sky == .night ? Theme.gold : Theme.navy)
+      .foregroundStyle(colors.line)
       .multilineTextAlignment(.center)
     if let onStatusLine {
       Button(action: onStatusLine) { text }
@@ -155,7 +153,7 @@ struct HomeView: View {
       Text(sleeping ? "Woke earlier? Set the time" : "Add a sleep from earlier")
         .font(.baloo(19, .semiBold))
         .underline()
-        .foregroundStyle(sky == .night ? Theme.gold : Theme.navy)
+        .foregroundStyle(colors.link)
     }
     .buttonStyle(.plain)
     .accessibilityIdentifier(sleeping ? "woke-earlier" : "add-sleep")
@@ -180,7 +178,7 @@ struct HomeView: View {
           .stroke(style: StrokeStyle(lineWidth: 4.8, lineCap: .round, lineJoin: .round))
       }
     }
-    .buttonStyle(MainButtonStyle(sky: sky))
+    .buttonStyle(MainButtonStyle(gold: colors.goldButton))
     .accessibilityLabel(sleeping ? "\(child.name) woke up" : "\(child.name) fell asleep")
     .accessibilityIdentifier(sleeping ? "Wake up" : "Sleep time")
     .transition(.opacity)
@@ -188,22 +186,56 @@ struct HomeView: View {
   }
 }
 
-/// The big main button of the home screen: navy by day, gold at night.
+/// The colours of the home screen on each sky, from `design/gallery.css`.
+private struct HomeColors {
+  let heading: Color
+  let line: Color
+  let link: Color
+  /// The ring of the selected avatar.
+  let ring: Color
+  /// The "+" of the switcher.
+  let add: Color
+  let photoBorder: Color
+  /// The main button is gold at night and at sunset, navy by day and at sunrise.
+  let goldButton: Bool
+
+  static func on(_ sky: SkyPhase) -> HomeColors {
+    switch sky {
+    case .day:
+      HomeColors(
+        heading: Theme.navy, line: Theme.navy, link: Theme.navy, ring: Theme.navy, add: Theme.navy,
+        photoBorder: .white, goldButton: false)
+    case .night:
+      HomeColors(
+        heading: Theme.cream, line: Theme.gold, link: Theme.gold, ring: Theme.cream, add: Theme.cream,
+        photoBorder: Theme.nightTab, goldButton: true)
+    case .sunset:
+      HomeColors(
+        heading: Theme.duskInk, line: Theme.duskInk, link: Theme.duskInk, ring: Theme.duskInk, add: Theme.navy,
+        photoBorder: .white, goldButton: true)
+    case .sunrise:
+      HomeColors(
+        heading: Theme.navy, line: Theme.navy, link: .white, ring: Theme.navy, add: Theme.navy,
+        photoBorder: .white, goldButton: false)
+    }
+  }
+}
+
+/// The big main button of the home screen: navy, or gold at night and at sunset.
 private struct MainButtonStyle: ButtonStyle {
-  let sky: Sky
+  let gold: Bool
 
   func makeBody(configuration: Configuration) -> some View {
-    let night = sky == .night
-    let ink = night ? Theme.nightSkyMid : .white
+    let ink = gold ? Theme.nightSkyMid : .white
     HStack(spacing: 14) {
-      configuration.label.labelStyle(MainButtonLabelStyle(iconColor: night ? Theme.nightSkyMid : Theme.sun))
+      configuration.label.labelStyle(MainButtonLabelStyle(iconColor: gold ? Theme.nightSkyMid : Theme.sun))
     }
     .font(.baloo(42, .extraBold))
     .foregroundStyle(ink)
     .frame(maxWidth: .infinity)
     .frame(height: 120)
-    .background(RoundedRectangle(cornerRadius: 40).fill(night ? Theme.gold : Theme.navy))
-    .background(RoundedRectangle(cornerRadius: 40).fill(night ? Theme.goldShadow : Theme.navyShadow).offset(y: 8))
+    .background(RoundedRectangle(cornerRadius: 40).fill(gold ? Theme.gold : Theme.navy))
+    .background(RoundedRectangle(cornerRadius: 40).fill(gold ? Theme.goldShadow : Theme.navyShadow).offset(y: 8))
     .offset(y: configuration.isPressed ? 4 : 0)
   }
 }
@@ -221,91 +253,11 @@ private struct MainButtonLabelStyle: LabelStyle {
   }
 }
 
-/// The day sky: the gradient, two clouds, the sun, and the hills, as in `design/pages/home/day.html`.
-struct DaySky: View {
-  var body: some View {
-    GeometryReader { geometry in
-      let width = geometry.size.width
-      let height = geometry.size.height
-      ZStack(alignment: .topLeading) {
-        LinearGradient(
-          stops: [
-            .init(color: Theme.daySkyTop, location: 0),
-            .init(color: Theme.daySkyMid, location: 0.6),
-            .init(color: Theme.daySkyLow, location: 1),
-          ], startPoint: .top, endPoint: .bottom)
-        Capsule().fill(Theme.cloud.opacity(0.85))
-          .frame(width: 170, height: 60)
-          .position(x: -40 + 85, y: 150 + 30)
-        Capsule().fill(Theme.cloud.opacity(0.85))
-          .frame(width: 140, height: 50)
-          .position(x: width + 30 - 70, y: 250 + 25)
-        Circle().fill(Theme.sun)
-          .frame(width: 64, height: 64)
-          .position(x: width - 40 - 32, y: 130 + 32)
-        Hill(points: Hill.back).fill(Theme.dayHillBack)
-          .frame(width: width, height: 324)
-          .offset(y: height - 324)
-        Hill(points: Hill.front).fill(Theme.dayHillFront)
-          .frame(width: width, height: 324)
-          .offset(y: height - 324)
-      }
-    }
-    .ignoresSafeArea()
-  }
-}
-
-/// The night sky: the gradient, the stars, the moon, and the night hills, as in `design/pages/home/night.html`.
-struct NightSky: View {
-  /// The stars of the gallery page: x, y, size, rotation in degrees, and whether it is a big one.
-  private static let stars: [(x: CGFloat, y: CGFloat, size: CGFloat, rotation: Double, big: Bool)] = [
-    (30, 140, 18, -20, true), (90, 215, 10, 3, false), (165, 118, 14, -14, false), (250, 190, 22, 9, true),
-    (318, 262, 12, -8, false), (56, 330, 24, 15, true), (205, 300, 9, -2, false), (300, 160, 11, -19, false),
-    (24, 404, 13, 4, false), (300, 470, 20, -13, true), (20, 470, 11, 10, false), (350, 440, 15, -7, false),
-    (150, 490, 8, 16, false), (230, 250, 7, -1, false),
-  ]
-
-  var body: some View {
-    GeometryReader { geometry in
-      let width = geometry.size.width
-      let height = geometry.size.height
-      ZStack(alignment: .topLeading) {
-        LinearGradient(
-          stops: [
-            .init(color: Theme.nightSkyTop, location: 0),
-            .init(color: Theme.nightSkyMid, location: 0.55),
-            .init(color: Theme.nightSkyLow, location: 0.8),
-            .init(color: Theme.nightSkyLow, location: 1),
-          ], startPoint: .top, endPoint: .bottom)
-        ForEach(Array(Self.stars.enumerated()), id: \.offset) { _, star in
-          Star()
-            .fill(Theme.star)
-            .stroke(Theme.star, style: StrokeStyle(lineWidth: 1.5 * star.size / 24, lineJoin: .round))
-            .frame(width: star.size, height: star.size)
-            .rotationEffect(.degrees(star.rotation))
-            .opacity(star.big ? 0.9 : 0.6)
-            .position(x: star.x + star.size / 2, y: star.y + star.size / 2)
-        }
-        Crescent.filled.fill(Theme.moon)
-          .frame(width: 84, height: 84)
-          .position(x: width - 30 - 42, y: 120 + 42)
-        Hill(points: Hill.back).fill(Theme.nightHillBack)
-          .frame(width: width, height: 324)
-          .offset(y: height - 324)
-        Hill(points: Hill.front).fill(Theme.nightHillFront)
-          .frame(width: width, height: 324)
-          .offset(y: height - 324)
-      }
-    }
-    .ignoresSafeArea()
-  }
-}
-
 /// The gallery's crescent moon, in a 24 × 24 box: an outer arc, then an inner arc back to the start.
 ///
 /// The circles come from the SVG arcs of `design/pages/home/night.html` (the sky's moon) and
 /// `design/pages/home/day.html` (the "Sleep time" icon), converted to centers and angles.
-private struct Crescent: Shape {
+struct Crescent: Shape {
   struct Arc {
     let center: CGPoint
     let radius: CGFloat
@@ -363,55 +315,6 @@ private struct SunIcon: Shape {
       path.move(to: point(start))
       path.addLine(to: point(end))
     }
-    return path
-  }
-}
-
-/// The five-pointed star of the gallery, in a 24 × 24 box.
-private struct Star: Shape {
-  // M12 2.5 l2.9 6 6.6.8 -4.9 4.6 1.3 6.6 L12 17.2 l-5.9 3.3 1.3-6.6 -4.9-4.6 6.6-.8z
-  private static let points: [CGPoint] = [
-    CGPoint(x: 12, y: 2.5), CGPoint(x: 14.9, y: 8.5), CGPoint(x: 21.5, y: 9.3), CGPoint(x: 16.6, y: 13.9),
-    CGPoint(x: 17.9, y: 20.5), CGPoint(x: 12, y: 17.2), CGPoint(x: 6.1, y: 20.5), CGPoint(x: 7.4, y: 13.9),
-    CGPoint(x: 2.5, y: 9.3), CGPoint(x: 9.1, y: 8.5),
-  ]
-
-  func path(in rect: CGRect) -> Path {
-    var path = Path()
-    let scale = rect.width / 24
-    path.addLines(Self.points.map { CGPoint(x: rect.minX + $0.x * scale, y: rect.minY + $0.y * scale) })
-    path.closeSubpath()
-    return path
-  }
-}
-
-/// A hill from the gallery's SVG, drawn in a 390 × 324 box that is stretched to the frame.
-private struct Hill: Shape {
-  /// The start point, then one cubic curve and one smooth curve, as (control 1, control 2, end).
-  let points: [CGPoint]
-
-  // M0 70 C 80 20, 170 30, 240 55 S 360 40, 390 30. S mirrors the last control point: (310, 80).
-  static let back = [
-    CGPoint(x: 0, y: 70), CGPoint(x: 80, y: 20), CGPoint(x: 170, y: 30), CGPoint(x: 240, y: 55),
-    CGPoint(x: 310, y: 80), CGPoint(x: 360, y: 40), CGPoint(x: 390, y: 30),
-  ]
-  // M0 120 C 90 60, 200 70, 290 95 S 370 110, 390 100. The mirrored control point is (380, 120).
-  static let front = [
-    CGPoint(x: 0, y: 120), CGPoint(x: 90, y: 60), CGPoint(x: 200, y: 70), CGPoint(x: 290, y: 95),
-    CGPoint(x: 380, y: 120), CGPoint(x: 370, y: 110), CGPoint(x: 390, y: 100),
-  ]
-
-  func path(in rect: CGRect) -> Path {
-    let scaleX = rect.width / 390
-    let scaleY = rect.height / 324
-    func point(_ p: CGPoint) -> CGPoint { CGPoint(x: rect.minX + p.x * scaleX, y: rect.minY + p.y * scaleY) }
-    var path = Path()
-    path.move(to: point(points[0]))
-    path.addCurve(to: point(points[3]), control1: point(points[1]), control2: point(points[2]))
-    path.addCurve(to: point(points[6]), control1: point(points[4]), control2: point(points[5]))
-    path.addLine(to: point(CGPoint(x: 390, y: 324)))
-    path.addLine(to: point(CGPoint(x: 0, y: 324)))
-    path.closeSubpath()
     return path
   }
 }
