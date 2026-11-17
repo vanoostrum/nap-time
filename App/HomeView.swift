@@ -2,7 +2,7 @@ import Core
 import SwiftUI
 
 /// The home screen: the sky, the child switcher with "+", the selected child with the status line,
-/// and "Sleep time" with "Add a sleep from earlier", or "Wake up" with "Woke earlier? Set the time".
+/// "Sleep time" with "Add a sleep from earlier", or "Wake up" with "Woke earlier? Set the time", and the tab bar.
 ///
 /// With no children, as while the store loads, it shows only the sky, and `message` when there is one.
 struct HomeView: View {
@@ -20,6 +20,8 @@ struct HomeView: View {
   var onSleepLink: () -> Void = {}
   /// A tap on the status line. `nil` when there is no sleep to open.
   var onStatusLine: (() -> Void)?
+  /// A tap on the tab bar. `nil` hides the tab bar, as with no children.
+  var onTab: ((AppTab) -> Void)?
 
   /// Counts taps on the main button, for the haptic tap.
   @State private var mainButtonTaps = 0
@@ -62,7 +64,10 @@ struct HomeView: View {
             mainButton(children[index], status: status)
             sleepLink(sleeping: status.isSleeping)
           }
-          .padding(.bottom, 20)
+          .padding(.bottom, onTab == nil ? 20 : 8)
+          if let onTab {
+            TabBar(current: .today, sky: sky, onSelect: onTab)
+          }
         }
       }
       .padding(.horizontal, 24)
