@@ -15,3 +15,4 @@
 Notes that apply to every ticket.
 
 - The cloud agents run on Linux, with no Xcode and no simulator. They prove app code through CI, and screens through the `Screenshots` artifact.
+- A `skipped` `Screenshots` check counts as green on a PR that changes only skip-list paths (ADR 0003).

@@ -96,6 +96,18 @@ struct AppDriver {
     waitFor(text("Edit child"))
   }
 
+  /// Taps Delete on the delete confirmation of Edit child, after it shows and can take a tap.
+  /// Every UI test that deletes a child uses this: a tap before the confirmation shows fails on a busy simulator.
+  func confirmDeleteChild(file: StaticString = #filePath, line: UInt = #line) {
+    let confirm = app.buttons["confirm-delete"]
+    waitFor(confirm, file: file, line: line)
+    let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: confirm)
+    XCTAssertEqual(
+      XCTWaiter().wait(for: [hittable], timeout: 10), .completed, "confirm-delete cannot take a tap", file: file,
+      line: line)
+    confirm.tap()
+  }
+
   /// Taps the home screen's status line, which opens the running sleep or the last sleep.
   func tapStatusLine(_ line: String) {
     let status = app.buttons["status-line"]
