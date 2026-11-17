@@ -85,6 +85,11 @@ struct AppDriver {
     let avatar = button(name)
     waitFor(avatar)
     avatar.press(forDuration: 1.2)
+    // A busy CI simulator sometimes drops the synthesized press (seen in CRAFT-43 and CRAFT-44 runs),
+    // so press once more. The test still fails when Edit child does not open.
+    if !text("Edit child").waitForExistence(timeout: 10) {
+      avatar.press(forDuration: 1.2)
+    }
     waitFor(text("Edit child"))
   }
 
