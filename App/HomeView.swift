@@ -133,7 +133,12 @@ struct HomeView: View {
       mainButtonTaps += 1
       sleeping ? onWake() : onSleep()
     } label: {
-      Label(sleeping ? "Wake up" : "Sleep time", systemImage: sleeping ? "sun.max" : "moon")
+      Label {
+        Text(sleeping ? "Wake up" : "Sleep time")
+      } icon: {
+        (sleeping ? AnyShape(SunIcon()) : AnyShape(Crescent.outline))
+          .stroke(style: StrokeStyle(lineWidth: 4.8, lineCap: .round, lineJoin: .round))
+      }
     }
     .buttonStyle(MainButtonStyle(sky: sky))
     .accessibilityLabel(sleeping ? "\(child.name) woke up" : "\(child.name) fell asleep")
@@ -170,7 +175,6 @@ private struct MainButtonLabelStyle: LabelStyle {
   func makeBody(configuration: Configuration) -> some View {
     HStack(spacing: 14) {
       configuration.icon
-        .font(.system(size: 40, weight: .medium))
         .foregroundStyle(iconColor)
         .frame(width: 48, height: 48)
       configuration.title
@@ -243,11 +247,8 @@ struct NightSky: View {
             .opacity(star.big ? 0.9 : 0.6)
             .position(x: star.x + star.size / 2, y: star.y + star.size / 2)
         }
-        Image(systemName: "moon.fill")
-          .resizable()
-          .scaledToFit()
-          .foregroundStyle(Theme.moon)
-          .frame(width: 70, height: 70)
+        Crescent.filled.fill(Theme.moon)
+          .frame(width: 84, height: 84)
           .position(x: width - 30 - 42, y: 120 + 42)
         Hill(points: Hill.back).fill(Theme.nightHillBack)
           .frame(width: width, height: 324)
@@ -258,6 +259,72 @@ struct NightSky: View {
       }
     }
     .ignoresSafeArea()
+  }
+}
+
+/// The gallery's crescent moon, in a 24 × 24 box: an outer arc, then an inner arc back to the start.
+///
+/// The circles come from the SVG arcs of `design/pages/home/night.html` (the sky's moon) and
+/// `design/pages/home/day.html` (the "Sleep time" icon), converted to centers and angles.
+private struct Crescent: Shape {
+  struct Arc {
+    let center: CGPoint
+    let radius: CGFloat
+    /// Degrees, in the box's coordinates with y down.
+    let from: Double
+    let to: Double
+  }
+
+  let outer: Arc
+  let inner: Arc
+
+  // M20.5 14.2 A8.5 8.5 0 1 1 9.8 3.5 a6.6 6.6 0 0 0 10.7 10.7z
+  static let filled = Crescent(
+    outer: Arc(center: CGPoint(x: 12.411, y: 11.589), radius: 8.5, from: 17.89, to: 252.11),
+    inner: Arc(center: CGPoint(x: 15.15, y: 8.85), radius: 7.566, from: -135, to: -315))
+  // M21 12.8 A9 9 0 1 1 11.2 3 a7 7 0 0 0 9.8 9.8z
+  static let outline = Crescent(
+    outer: Arc(center: CGPoint(x: 12.039, y: 11.961), radius: 9, from: 5.35, to: 264.65),
+    inner: Arc(center: CGPoint(x: 16.8, y: 7.2), radius: 7, from: -143.13, to: -306.87))
+
+  func path(in rect: CGRect) -> Path {
+    let scale = rect.width / 24
+    func points(_ arc: Arc) -> [CGPoint] {
+      let steps = 48
+      return (0...steps).map { step in
+        let angle = (arc.from + (arc.to - arc.from) * Double(step) / Double(steps)) * .pi / 180
+        return CGPoint(
+          x: rect.minX + (arc.center.x + arc.radius * cos(angle)) * scale,
+          y: rect.minY + (arc.center.y + arc.radius * sin(angle)) * scale)
+      }
+    }
+    var path = Path()
+    path.addLines(points(outer) + points(inner))
+    path.closeSubpath()
+    return path
+  }
+}
+
+/// The gallery's sun icon for "Wake up", in a 24 × 24 box: a circle and eight rays.
+private struct SunIcon: Shape {
+  // M12 2v2 M12 20v2 M4.9 4.9l1.4 1.4 M17.7 17.7l1.4 1.4 M2 12h2 M20 12h2 M4.9 19.1l1.4-1.4 M17.7 6.3l1.4-1.4
+  private static let rays: [(CGPoint, CGPoint)] = [
+    (CGPoint(x: 12, y: 2), CGPoint(x: 12, y: 4)), (CGPoint(x: 12, y: 20), CGPoint(x: 12, y: 22)),
+    (CGPoint(x: 4.9, y: 4.9), CGPoint(x: 6.3, y: 6.3)), (CGPoint(x: 17.7, y: 17.7), CGPoint(x: 19.1, y: 19.1)),
+    (CGPoint(x: 2, y: 12), CGPoint(x: 4, y: 12)), (CGPoint(x: 20, y: 12), CGPoint(x: 22, y: 12)),
+    (CGPoint(x: 4.9, y: 19.1), CGPoint(x: 6.3, y: 17.7)), (CGPoint(x: 17.7, y: 6.3), CGPoint(x: 19.1, y: 4.9)),
+  ]
+
+  func path(in rect: CGRect) -> Path {
+    let scale = rect.width / 24
+    func point(_ p: CGPoint) -> CGPoint { CGPoint(x: rect.minX + p.x * scale, y: rect.minY + p.y * scale) }
+    var path = Path()
+    path.addEllipse(in: CGRect(x: rect.minX + 8 * scale, y: rect.minY + 8 * scale, width: 8 * scale, height: 8 * scale))
+    for (start, end) in Self.rays {
+      path.move(to: point(start))
+      path.addLine(to: point(end))
+    }
+    return path
   }
 }
 
