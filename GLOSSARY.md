@@ -9,11 +9,11 @@ The local Swift package `Packages/Core`, which holds all pure logic and imports 
 _Avoid_: domain module, model layer
 
 **Test mode**:
-The app mode that CI starts with launch arguments: an in-memory store with seeded data, a fixed clock, and a fixed location, with CloudKit and notifications off.
+The app mode that CI starts with launch arguments: an in-memory store with the data of a named seed and a fixed clock, with CloudKit and notifications off.
 _Avoid_: demo mode, mock mode, UI test mode
 
 **Screenshot evidence**:
-The PNG files in the `screenshots` artifact of the `Screenshots` CI job, one per entry point. They are how an agent proves a screen.
+The PNG files that the `Screenshots` CI job saves, one per entry point. The job pushes them to the branch `screenshots/<branch>`, in the folder `<head sha>/`, and uploads them as the `screenshots` artifact. Cloud agents read them from the branch, because they cannot reach the artifact host. They are how an agent proves a screen.
 _Avoid_: snapshots, golden images
 
 **Family store**:
@@ -21,7 +21,7 @@ The on-device store in the App Group container, which the app, the widget, and t
 _Avoid_: database, cache
 
 **Entry point**:
-A screen or view that `drive-app` expects a screenshot of, such as `home` or `live-activity`. Each entry point gives one PNG in the `screenshots` artifact, named after it.
+A screen or view that `drive-app` expects a screenshot of, such as `home` or `add-child`. Each entry point gives one PNG named after it, in `screenshots/<branch>/<head sha>/`.
 _Avoid_: screen ID, route
 
 ### Children and sleep
@@ -57,7 +57,7 @@ _Avoid_: active sleep, open sleep, timer
 ### The week
 
 **Sleep day**:
-The 24 hours from 18:00 on one date to 18:00 on the next. It carries the name of the second date, so a night counts for the morning it ends in.
+The time from 18:00 on one date to 18:00 on the next, which is 23 or 25 hours on the day the clock changes. It carries the name of the second date, so a night counts for the morning it ends in.
 _Avoid_: calendar day, 24-hour period
 
 **Week**:
@@ -95,7 +95,7 @@ _Avoid_: alert, reminder, push
 ### Screens
 
 **Sky**:
-The background of the home screen. It shows day, sunset, night, or sunrise.
+The background of the home screen. It shows day, sunset, night, or sunrise from the sun times of Utrecht, and night while the selected child's night runs.
 _Avoid_: theme, mode, background
 
 **Day sheet**:
