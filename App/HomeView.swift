@@ -134,7 +134,7 @@ struct HomeView: View {
     let sleeping = status.isSleeping
     return Button {
       let now = Date()
-      guard now.timeIntervalSince(lastMainButtonTap) >= 1 else { return }
+      guard now.timeIntervalSince(lastMainButtonTap) >= 0.5 else { return }
       lastMainButtonTap = now
       mainButtonTaps += 1
       sleeping ? onWake() : onSleep()
