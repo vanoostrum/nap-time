@@ -67,7 +67,7 @@ final class ChildFlowTests: XCTestCase {
     driver.button("Delete Mila").tap()
     driver.waitFor(driver.text("Delete Mila?"))
     driver.button("confirm-cancel").tap()
-    XCTAssertTrue(driver.text("Delete Mila?").waitForNonExistence(timeout: 10))
+    XCTAssertTrue(driver.text("Delete Mila?").disappears(within: 10))
     driver.button("cancel").tap()
     driver.waitFor(driver.text("Mila is awake"))
     XCTAssertEqual(driver.avatars.count, 2, "Cancel on the confirmation keeps the child")

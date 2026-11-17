@@ -116,35 +116,29 @@ jobs:
       - uses: actions/checkout@v5
       - name: Select Xcode and simulator
         run: scripts/ci-select-xcode.sh >> "$GITHUB_ENV"
-      # The boot takes about 3 minutes, so it runs in the background while the app builds.
-      - name: Start to boot the simulator
-        run: |
-          mkdir -p build
-          ( xcrun simctl bootstatus "$SIMULATOR_ID" -b; echo $? > build/boot.status ) \
-            < /dev/null > build/boot.log 2>&1 &
-          echo "Booting $SIMULATOR_ID in the background"
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate the Xcode project
         run: xcodegen generate
+      # The boot takes about 3 minutes. It runs in the background while the app builds and xcodebuild starts.
+      # As soon as it ends, the same background job fixes the status bar, so screenshots are the same
+      # on every run (ADR 0003). xcodebuild installs the app only on a booted simulator, so this comes first.
+      - name: Start to boot the simulator
+        run: |
+          mkdir -p build
+          (
+            xcrun simctl bootstatus "$SIMULATOR_ID" -b || { xcrun simctl boot "$SIMULATOR_ID"; xcrun simctl bootstatus "$SIMULATOR_ID" -b; }
+            xcrun simctl status_bar "$SIMULATOR_ID" override --time "09:41" --dataNetwork wifi --wifiMode active \
+              --wifiBars 3 --cellularMode notSupported --batteryState charged --batteryLevel 100
+            echo "exit $? at $(date -u +%H:%M:%S)"
+          ) < /dev/null > build/boot.log 2>&1 &
+          echo "Booting $SIMULATOR_ID in the background, from $(date -u +%H:%M:%S)"
       - name: Build for testing
         run: |
           set -o pipefail
           xcodebuild build-for-testing -project NapTime.xcodeproj -scheme NapTime \
             -destination "id=$SIMULATOR_ID" -derivedDataPath build/DerivedData \
             CODE_SIGNING_ALLOWED=NO
-      # A fixed status bar, so home.png is the same on every run (ADR 0003).
-      - name: Wait for the simulator and fix the status bar
-        run: |
-          for _ in $(seq 600); do [ -f build/boot.status ] && break; sleep 1; done
-          cat build/boot.log
-          if [ "$(cat build/boot.status 2>/dev/null)" != "0" ]; then
-            echo "The background boot did not end well. Booting again."
-            xcrun simctl boot "$SIMULATOR_ID" || true
-            xcrun simctl bootstatus "$SIMULATOR_ID" -b
-          fi
-          xcrun simctl status_bar "$SIMULATOR_ID" override --time "09:41" --dataNetwork wifi --wifiMode active \
-            --wifiBars 3 --cellularMode notSupported --batteryState charged --batteryLevel 100
       # A failed test runs once more. A test that passes on the retry passes, and gets a warning in the export step.
       - name: Run the UI tests
         id: uitests
@@ -156,6 +150,9 @@ jobs:
             -only-testing:NapTimeUITests -retry-tests-on-failure -test-iterations 2 \
             -resultBundlePath build/Screenshots.xcresult \
             CODE_SIGNING_ALLOWED=NO
+      - name: Show the boot and status bar log
+        if: always()
+        run: cat build/boot.log
       - name: Export the screenshots
         if: always()
         run: python3 scripts/export-screenshots.py build/Screenshots.xcresult build/screenshots
