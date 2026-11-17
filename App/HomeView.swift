@@ -108,7 +108,8 @@ struct HomeView: View {
         .frame(width: 150, height: 150)
         .overlay(Circle().strokeBorder(sky == .night ? Theme.nightTab : .white, lineWidth: 6))
         .accessibilityLabel("\(child.name)'s photo")
-      VStack(spacing: 0) {
+      // Baloo's line height is taller than the gallery's 1.05, so pull the status line up.
+      VStack(spacing: -6) {
         Text(status?.heading(name: child.name) ?? "\(child.name) is awake")
           .font(.baloo(40, .extraBold))
           .foregroundStyle(ink)
