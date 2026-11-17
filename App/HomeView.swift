@@ -2,7 +2,7 @@ import Core
 import SwiftUI
 
 /// The home screen: the sky, the child switcher with "+", the selected child with the status line,
-/// and "Sleep time" or "Wake up".
+/// and "Sleep time" with "Add a sleep from earlier", or "Wake up" with "Woke earlier? Set the time".
 ///
 /// With no children, as while the store loads, it shows only the sky, and `message` when there is one.
 struct HomeView: View {
@@ -16,6 +16,10 @@ struct HomeView: View {
   var onEdit: (Child.ID) -> Void = { _ in }
   var onSleep: () -> Void = {}
   var onWake: () -> Void = {}
+  /// "Add a sleep from earlier", or "Woke earlier? Set the time" while a sleep runs.
+  var onSleepLink: () -> Void = {}
+  /// A tap on the status line. `nil` when there is no sleep to open.
+  var onStatusLine: (() -> Void)?
 
   /// Counts taps on the main button, for the haptic tap.
   @State private var mainButtonTaps = 0
@@ -56,7 +60,11 @@ struct HomeView: View {
         }
         Spacer(minLength: 0)
         if let index = selectedIndex, let status {
-          mainButton(children[index], status: status)
+          VStack(spacing: 14) {
+            mainButton(children[index], status: status)
+            sleepLink(sleeping: status.isSleeping)
+          }
+          .padding(.bottom, 20)
         }
       }
       .padding(.horizontal, 24)
@@ -119,14 +127,40 @@ struct HomeView: View {
           .multilineTextAlignment(.center)
           .fixedSize(horizontal: false, vertical: true)
         if let status {
-          Text(status.line)
-            .font(.baloo(20, .semiBold))
-            .foregroundStyle(sky == .night ? Theme.gold : Theme.navy)
-            .multilineTextAlignment(.center)
+          statusLine(status.line)
         }
       }
     }
     .padding(.top, 90)
+  }
+
+  /// The status line. A tap opens the running sleep, or the last sleep, when there is one.
+  @ViewBuilder private func statusLine(_ line: String) -> some View {
+    let text = Text(line)
+      .font(.baloo(20, .semiBold))
+      .foregroundStyle(sky == .night ? Theme.gold : Theme.navy)
+      .multilineTextAlignment(.center)
+    if let onStatusLine {
+      Button(action: onStatusLine) { text }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("status-line")
+    } else {
+      text.accessibilityIdentifier("status-line")
+    }
+  }
+
+  /// The underlined link below the main button.
+  private func sleepLink(sleeping: Bool) -> some View {
+    Button(action: onSleepLink) {
+      Text(sleeping ? "Woke earlier? Set the time" : "Add a sleep from earlier")
+        .font(.baloo(19, .semiBold))
+        .underline()
+        .foregroundStyle(sky == .night ? Theme.gold : Theme.navy)
+    }
+    .buttonStyle(.plain)
+    .accessibilityIdentifier(sleeping ? "woke-earlier" : "add-sleep")
+    .transition(.opacity)
+    .id(sleeping)
   }
 
   /// "Sleep time" while the child is awake, "Wake up" while a sleep runs.
@@ -149,7 +183,6 @@ struct HomeView: View {
     .buttonStyle(MainButtonStyle(sky: sky))
     .accessibilityLabel(sleeping ? "\(child.name) woke up" : "\(child.name) fell asleep")
     .accessibilityIdentifier(sleeping ? "Wake up" : "Sleep time")
-    .padding(.bottom, 20)
     .transition(.opacity)
     .id(sleeping)
   }

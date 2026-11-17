@@ -22,11 +22,16 @@ struct RootView: View {
   private enum Cover: Identifiable {
     case addAnother
     case edit(Child.ID)
+    case sleep(SleepFormMode)
 
     var id: String {
       switch self {
       case .addAnother: "add-another"
       case .edit(let id): id.uuidString
+      case .sleep(.new(_, let childID)): "new-sleep-\(childID.uuidString)"
+      case .sleep(.edit(let sleep)): "edit-sleep-\(sleep.id.uuidString)"
+      case .sleep(.wokeEarlier(let sleep)): "woke-earlier-\(sleep.id.uuidString)"
+      case .sleep(.runningStart(let sleep)): "running-start-\(sleep.id.uuidString)"
       }
     }
   }
@@ -85,7 +90,9 @@ struct RootView: View {
             onAdd: { cover = .addAnother },
             onEdit: { cover = .edit($0) },
             onSleep: { if let selected { startSleep(selected, store: store) } },
-            onWake: { if let selected { endSleep(selected, store: store) } }
+            onWake: { if let selected { endSleep(selected, store: store) } },
+            onSleepLink: { if let selected { openSleepLink(selected, store: store, now: now) } },
+            onStatusLine: selected.flatMap { statusLineAction($0, store: store) }
           )
         }
         .fullScreenCover(item: $cover) { cover in
@@ -124,7 +131,38 @@ struct RootView: View {
             }
           })
       }
+    case .sleep(let mode):
+      if let child = store.children.first(where: { $0.id == mode.childID }) {
+        SleepFormView(
+          mode: mode, child: child, sleeps: store.sleeps(of: child.id), now: fixedNow ?? Date(), calendar: calendar,
+          onSave: { sleep in
+            try store.saveSleep(sleep)
+            self.cover = nil
+          },
+          onCancel: { self.cover = nil },
+          onDelete: { sleep in
+            try store.deleteSleep(id: sleep.id)
+            self.cover = nil
+          })
+      }
     }
+  }
+
+  /// "Add a sleep from earlier" while the child is awake, "Woke earlier? Set the time" while a sleep runs.
+  private func openSleepLink(_ childID: Child.ID, store: FamilyStore, now: Date) {
+    if let running = store.sleeps(of: childID).first(where: \.isRunning) {
+      cover = .sleep(.wokeEarlier(running))
+    } else {
+      cover = .sleep(.new(SleepStartValues.today(now: now, in: calendar.timeZone), childID: childID))
+    }
+  }
+
+  /// The status line opens the running sleep, or else the child's last sleep. With no sleeps it does nothing.
+  private func statusLineAction(_ childID: Child.ID, store: FamilyStore) -> (() -> Void)? {
+    guard let last = store.sleeps(of: childID).first(where: \.isRunning) ?? store.sleeps(of: childID).first else {
+      return nil
+    }
+    return { cover = .sleep(last.isRunning ? .runningStart(last) : .edit(last)) }
   }
 
   /// "Sleep time": starts a running sleep now, a night or a nap by the time of day.
@@ -161,7 +199,8 @@ struct RootView: View {
       let groupURL = FileManager.default.containerURL(
         forSecurityApplicationGroupIdentifier: FamilyStore.appGroupIdentifier)
       let description = try FamilyStore.storeDescription(for: mode, appGroupContainerURL: groupURL)
-      let store = try await FamilyStore.load(description)
+      let fixedNow = fixedNow
+      let store = try await FamilyStore.load(description, now: { fixedNow ?? Date() })
       if case .test(let environment) = mode {
         var ids: [Child.ID] = []
         for child in environment.seed.children {
