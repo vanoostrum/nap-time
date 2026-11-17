@@ -15,7 +15,9 @@ Each one starts the app with `--test-mode`, its seed, and the default test time 
 
 - `add-child`: `--seed none`. "Add your child" as the app opens, empty. Page `child/add-empty.html`. Test: `EntryPointTests.testAddChild`.
 - `add-child-filled`: `--seed none`. Types "Mila", sets the birthdate wheel to 12 March 2025, and closes the birthdate sheet. Page `child/add.html`. Test: `EntryPointTests.testAddChildFilled`.
-- `home`: `--seed family`, with Mila selected. The day sky, the child switcher with "+", and "Mila is awake". Page `home/day.html`. Test: `EntryPointTests.testHome`.
+- `home`: `--seed family`, with Mila selected. The day sky, the child switcher with "+", "Mila is awake", "since 06:55 · 11 h 10 m slept today", and "Sleep time". Page `home/day.html`. Test: `EntryPointTests.testHome`.
+- `home-sleeping`: `--seed sleeping --now 2026-06-21T21:56:00+02:00`. The night sky, "Mila is sleeping", "2 h 14 m · since 19:42", and "Wake up". Page `home/night.html`, without the gear, the Charts tab, and the link. Test: `EntryPointTests.testHomeSleeping`.
+- `home-napping`: `--seed napping --now 2026-06-21T13:50:00+02:00`. The day sky, "Mila is sleeping", "45 m · since 13:05", and "Wake up". Page `home/nap.html`, without the gear, the Charts tab, and the link. Test: `EntryPointTests.testHomeNapping`.
 - `add-another-child`: `--seed family`. Taps "+", types "Noah", sets the birthdate wheel to 10 February 2022, and closes the birthdate sheet. Page `child/add-another.html`. Test: `EntryPointTests.testAddAnotherChild`.
 - `edit-child`: `--seed family`. Touches and holds Mila's avatar. Page `child/edit.html`. Test: `EntryPointTests.testEditChild`.
 - `delete-child`: `--seed family`. Opens Edit child for Mila and taps "Delete Mila". Page `child/delete.html`. Test: `EntryPointTests.testDeleteChild`.
@@ -25,7 +27,7 @@ Each one starts the app with `--test-mode`, its seed, and the default test time 
 
 ## Add an entry point
 
-1. In `NapTimeUITests`, add a test that launches the app with `AppDriver.launch(seed:)` (add `--now` or `--location` if the screen needs them), opens the screen, and calls `attachScreenshot(_:to:)` with the entry point name. The seeds are `none`, `family`, and `long-name`, in Core's `Seed`. For a view that a UI test cannot open, render it with `ImageRenderer`, and add its source file to the `NapTimeUITests` sources in `project.yml`.
+1. In `NapTimeUITests`, add a test that launches the app with `AppDriver.launch(seed:)` (add `--now` or `--location` if the screen needs them), opens the screen, and calls `attachScreenshot(_:to:)` with the entry point name. The seeds are `none`, `family`, `long-name`, `sleeping`, and `napping`, in Core's `Seed`. For a view that a UI test cannot open, render it with `ImageRenderer`, and add its source file to the `NapTimeUITests` sources in `project.yml`.
 2. Add the entry point to the list above.
 
 ## Run

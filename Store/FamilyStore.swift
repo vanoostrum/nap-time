@@ -41,6 +41,9 @@ public final class FamilyStore {
   /// The children, in the order they were added.
   public private(set) var children: [Child] = []
 
+  /// The sleeps of all children, newest first.
+  public private(set) var sleeps: [Sleep] = []
+
   public let container: NSPersistentCloudKitContainer
 
   private init(container: NSPersistentCloudKitContainer) {
@@ -126,9 +129,42 @@ public final class FamilyStore {
     try save()
   }
 
-  /// Deletes a child.
+  /// Deletes a child and all of the child's sleeps.
   public func delete(_ id: Child.ID) throws {
     context.delete(try childObject(id))
+    try save()
+  }
+
+  // MARK: Sleeps
+
+  /// The sleeps of the child with this id, newest first.
+  public func sleeps(of childID: Child.ID) -> [Sleep] {
+    sleeps.filter { $0.childID == childID }
+  }
+
+  /// Starts a running sleep for a child. Does nothing when that child already has a running sleep,
+  /// so a double tap makes one sleep.
+  public func startSleep(childID: Child.ID, at start: Date, kind: SleepKind) throws {
+    let child = try childObject(childID)
+    guard try runningSleepObject(of: childID) == nil else { return }
+    let object = NSManagedObject(entity: try entity(SleepKey.entity), insertInto: context)
+    object.setValue(UUID(), forKey: Key.identifier)
+    object.setValue(start, forKey: SleepKey.start)
+    object.setValue(kind.rawValue, forKey: SleepKey.kind)
+    object.setValue(child, forKey: SleepKey.child)
+    try save()
+  }
+
+  /// Ends a child's running sleep. A sleep shorter than `Sleep.shortest` is deleted instead.
+  /// Does nothing when no sleep runs.
+  public func endSleep(childID: Child.ID, at end: Date) throws {
+    guard let object = try runningSleepObject(of: childID) else { return }
+    let start = object.value(forKey: SleepKey.start) as? Date ?? end
+    if end.timeIntervalSince(start) < Sleep.shortest {
+      context.delete(object)
+    } else {
+      object.setValue(end, forKey: SleepKey.end)
+    }
     try save()
   }
 
@@ -145,6 +181,14 @@ public final class FamilyStore {
     static let addedAt = "addedAt"
   }
 
+  private enum SleepKey {
+    static let entity = "Sleep"
+    static let start = "start"
+    static let end = "end"
+    static let kind = "kind"
+    static let child = "child"
+  }
+
   private var context: NSManagedObjectContext { container.viewContext }
 
   private static func prepared(_ photo: Data?) async throws -> Data? {
@@ -153,10 +197,22 @@ public final class FamilyStore {
   }
 
   private func childEntity() throws -> NSEntityDescription {
-    guard let entity = container.managedObjectModel.entitiesByName[Key.entity] else {
+    try entity(Key.entity)
+  }
+
+  private func entity(_ name: String) throws -> NSEntityDescription {
+    guard let entity = container.managedObjectModel.entitiesByName[name] else {
       throw FamilyStoreError.modelNotFound
     }
     return entity
+  }
+
+  private func runningSleepObject(of childID: Child.ID) throws -> NSManagedObject? {
+    let request = NSFetchRequest<NSManagedObject>(entityName: SleepKey.entity)
+    request.predicate = NSPredicate(
+      format: "%K.%K == %@ AND %K == nil", SleepKey.child, Key.identifier, childID as NSUUID, SleepKey.end)
+    request.fetchLimit = 1
+    return try context.fetch(request).first
   }
 
   private func write(name: String, birthDate: BirthDate, to object: NSManagedObject) {
@@ -193,6 +249,20 @@ public final class FamilyStore {
       return Child(
         id: id, name: object.value(forKey: Key.name) as? String ?? "", birthDate: birthDate,
         photo: object.value(forKey: Key.photo) as? Data)
+    }
+
+    let sleepRequest = NSFetchRequest<NSManagedObject>(entityName: SleepKey.entity)
+    sleepRequest.sortDescriptors = [NSSortDescriptor(key: SleepKey.start, ascending: false)]
+    let sleepObjects = (try? context.fetch(sleepRequest)) ?? []
+    sleeps = sleepObjects.compactMap { object in
+      guard let id = object.value(forKey: Key.identifier) as? UUID,
+        let childID = (object.value(forKey: SleepKey.child) as? NSManagedObject)?.value(forKey: Key.identifier)
+          as? UUID,
+        let start = object.value(forKey: SleepKey.start) as? Date
+      else { return nil }
+      let kind = (object.value(forKey: SleepKey.kind) as? String).flatMap(SleepKind.init(rawValue:)) ?? .nap
+      return Sleep(
+        id: id, childID: childID, start: start, end: object.value(forKey: SleepKey.end) as? Date, kind: kind)
     }
   }
 

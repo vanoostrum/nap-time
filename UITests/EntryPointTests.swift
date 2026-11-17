@@ -32,14 +32,42 @@ final class EntryPointTests: XCTestCase {
     driver.attachScreenshot("add-child-filled", to: self)
   }
 
-  /// `home`: the home screen with Mila selected. Page `home/day.html`.
+  /// `home`: the home screen with Mila selected and awake. Page `home/day.html`.
   @MainActor
   func testHome() throws {
     let driver = AppDriver.launch(seed: "family")
     driver.waitFor(driver.text("Mila is awake"))
     XCTAssertEqual(driver.avatars.count, 2)
     XCTAssertTrue(driver.button("Add a child").exists)
+    XCTAssertTrue(driver.text("since 06:55 · 11 h 10 m slept today").exists)
+    XCTAssertTrue(driver.button("Sleep time").exists)
+    XCTAssertFalse(driver.app.buttons["Add a sleep from earlier"].exists)
+    XCTAssertFalse(driver.app.buttons["Settings"].exists)
+    XCTAssertFalse(driver.app.buttons["Charts"].exists)
+    driver.waitForSky("day")
     driver.attachScreenshot("home", to: self)
+  }
+
+  /// `home-sleeping`: Mila sleeps a night since 19:42, at 21:56. Page `home/night.html`.
+  @MainActor
+  func testHomeSleeping() throws {
+    let driver = AppDriver.launch(seed: "sleeping", now: "2026-06-21T21:56:00+02:00")
+    driver.waitFor(driver.text("Mila is sleeping"))
+    XCTAssertTrue(driver.text("2 h 14 m · since 19:42").exists)
+    XCTAssertTrue(driver.button("Wake up").exists)
+    driver.waitForSky("night")
+    driver.attachScreenshot("home-sleeping", to: self)
+  }
+
+  /// `home-napping`: Mila naps since 13:05, at 13:50. Page `home/nap.html`.
+  @MainActor
+  func testHomeNapping() throws {
+    let driver = AppDriver.launch(seed: "napping", now: "2026-06-21T13:50:00+02:00")
+    driver.waitFor(driver.text("Mila is sleeping"))
+    XCTAssertTrue(driver.text("45 m · since 13:05").exists)
+    XCTAssertTrue(driver.button("Wake up").exists)
+    driver.waitForSky("day")
+    driver.attachScreenshot("home-napping", to: self)
   }
 
   /// `add-another-child`: "Add a child" from "+", filled in for Noah. Page `child/add-another.html`.

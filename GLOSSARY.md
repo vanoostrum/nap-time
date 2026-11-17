@@ -57,7 +57,7 @@ _Avoid_: active sleep, open sleep, timer
 ### The week
 
 **Sleep day**:
-The 24 hours from 18:00 on one date to 18:00 on the next. It carries the name of the second date, so a night counts for the morning it ends in.
+The time from 18:00 on one date to 18:00 on the next, which is 23 or 25 hours on the day the clock changes. It carries the name of the second date, so a night counts for the morning it ends in.
 _Avoid_: calendar day, 24-hour period
 
 **Week**:

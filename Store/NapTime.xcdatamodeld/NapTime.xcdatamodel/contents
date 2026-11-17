@@ -8,5 +8,13 @@
         <attribute name="birthDay" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="photo" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
         <attribute name="addedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="sleeps" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Sleep" inverseName="child" inverseEntity="Sleep"/>
+    </entity>
+    <entity name="Sleep" representedClassName="NSManagedObject" syncable="YES">
+        <attribute name="identifier" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="start" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="end" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="kind" optional="YES" attributeType="String" defaultValueString="nap"/>
+        <relationship name="child" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Child" inverseName="sleeps" inverseEntity="Child"/>
     </entity>
 </model>
