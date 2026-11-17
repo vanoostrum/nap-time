@@ -13,6 +13,8 @@ public enum FamilyStoreError: Error, Equatable, CustomStringConvertible {
   case unreadablePhoto
   /// No child has this id.
   case childNotFound
+  /// The Core save rule refuses the sleep for this reason.
+  case sleepRefused(SleepProblem)
 
   public var description: String {
     switch self {
@@ -24,6 +26,8 @@ public enum FamilyStoreError: Error, Equatable, CustomStringConvertible {
       "The photo is not an image that Nap Time can read"
     case .childNotFound:
       "The child is not in the family store"
+    case .sleepRefused(let problem):
+      "The sleep cannot be saved: \(problem)"
     }
   }
 }
@@ -46,8 +50,12 @@ public final class FamilyStore {
 
   public let container: NSPersistentCloudKitContainer
 
-  private init(container: NSPersistentCloudKitContainer) {
+  /// The app clock: the real time in the normal mode, `TestEnvironment.now` in test mode.
+  private let now: () -> Date
+
+  private init(container: NSPersistentCloudKitContainer, now: @escaping () -> Date) {
     self.container = container
+    self.now = now
     reload()
   }
 
@@ -85,8 +93,10 @@ public final class FamilyStore {
     return description
   }
 
-  /// Loads the family store with the given description.
-  public static func load(_ description: NSPersistentStoreDescription) async throws -> FamilyStore {
+  /// Loads the family store with the given description. `now` is the app clock, for the save rule of `saveSleep`.
+  public static func load(
+    _ description: NSPersistentStoreDescription, now: @escaping () -> Date = { Date() }
+  ) async throws -> FamilyStore {
     guard let model = managedObjectModel else { throw FamilyStoreError.modelNotFound }
     let container = NSPersistentCloudKitContainer(name: modelName, managedObjectModel: model)
     container.persistentStoreDescriptions = [description]
@@ -103,7 +113,7 @@ public final class FamilyStore {
       }
     }
     container.viewContext.automaticallyMergesChangesFromParent = true
-    return FamilyStore(container: container)
+    return FamilyStore(container: container, now: now)
   }
 
   /// Adds a child at the end of `children`. The photo follows `ChildPhoto`.
@@ -168,6 +178,34 @@ public final class FamilyStore {
     try save()
   }
 
+  /// Adds a new sleep, or replaces the sleep with the same id. Throws `FamilyStoreError.sleepRefused`,
+  /// and saves nothing, when the Core save rule finds a problem at the app clock's now.
+  public func saveSleep(_ sleep: Sleep) throws {
+    if let problem = SleepSaveRule.problem(of: sleep, among: sleeps(of: sleep.childID), now: now()) {
+      throw FamilyStoreError.sleepRefused(problem)
+    }
+    let object: NSManagedObject
+    if let saved = try sleepObject(sleep.id) {
+      object = saved
+    } else {
+      let child = try childObject(sleep.childID)
+      object = NSManagedObject(entity: try entity(SleepKey.entity), insertInto: context)
+      object.setValue(sleep.id, forKey: Key.identifier)
+      object.setValue(child, forKey: SleepKey.child)
+    }
+    object.setValue(sleep.start, forKey: SleepKey.start)
+    object.setValue(sleep.end, forKey: SleepKey.end)
+    object.setValue(sleep.kind.rawValue, forKey: SleepKey.kind)
+    try save()
+  }
+
+  /// Deletes the sleep with this id. Does nothing for an unknown id.
+  public func deleteSleep(id: Sleep.ID) throws {
+    guard let object = try sleepObject(id) else { return }
+    context.delete(object)
+    try save()
+  }
+
   // MARK: Private
 
   private enum Key {
@@ -211,6 +249,13 @@ public final class FamilyStore {
     let request = NSFetchRequest<NSManagedObject>(entityName: SleepKey.entity)
     request.predicate = NSPredicate(
       format: "%K.%K == %@ AND %K == nil", SleepKey.child, Key.identifier, childID as NSUUID, SleepKey.end)
+    request.fetchLimit = 1
+    return try context.fetch(request).first
+  }
+
+  private func sleepObject(_ id: Sleep.ID) throws -> NSManagedObject? {
+    let request = NSFetchRequest<NSManagedObject>(entityName: SleepKey.entity)
+    request.predicate = NSPredicate(format: "%K == %@", Key.identifier, id as NSUUID)
     request.fetchLimit = 1
     return try context.fetch(request).first
   }

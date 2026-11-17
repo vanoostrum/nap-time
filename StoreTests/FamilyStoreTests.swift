@@ -250,6 +250,117 @@ import UniformTypeIdentifiers
     }
   }
 
+  // MARK: Edit sleeps
+
+  @Test @MainActor func saveSleepAddsANewSleep() async throws {
+    let store = try await inMemoryStore(now: date("2026-06-21T10:00:00+02:00"))
+    let mila = try await store.add(name: "Mila", birthDate: day(2025, 3, 12), photo: nil)
+    let nap = Sleep(
+      id: UUID(), childID: mila.id, start: date("2026-06-21T09:00:00+02:00"), end: date("2026-06-21T10:00:00+02:00"),
+      kind: .nap)
+
+    try store.saveSleep(nap)
+
+    #expect(store.sleeps(of: mila.id) == [nap])
+  }
+
+  @Test @MainActor func saveSleepReplacesTheSleepWithTheSameID() async throws {
+    let store = try await inMemoryStore(now: date("2026-06-21T10:00:00+02:00"))
+    let mila = try await store.add(name: "Mila", birthDate: day(2025, 3, 12), photo: nil)
+    try store.startSleep(childID: mila.id, at: date("2026-06-20T19:45:00+02:00"), kind: .night)
+    try store.endSleep(childID: mila.id, at: date("2026-06-21T06:55:00+02:00"))
+    var night = try #require(store.sleeps(of: mila.id).first)
+
+    night.start = date("2026-06-20T20:10:00+02:00")
+    night.end = date("2026-06-21T06:30:00+02:00")
+    night.kind = .nap
+    try store.saveSleep(night)
+
+    #expect(store.sleeps(of: mila.id) == [night])
+  }
+
+  @Test @MainActor func saveSleepThrowsAndSavesNothingForARefusedSleep() async throws {
+    let store = try await inMemoryStore(now: date("2026-06-21T07:30:00+02:00"))
+    let mila = try await store.add(name: "Mila", birthDate: day(2025, 3, 12), photo: nil)
+    try store.startSleep(childID: mila.id, at: date("2026-06-20T19:45:00+02:00"), kind: .night)
+    try store.endSleep(childID: mila.id, at: date("2026-06-21T06:55:00+02:00"))
+    let night = try #require(store.sleeps(of: mila.id).first)
+    let overlapping = Sleep(
+      id: UUID(), childID: mila.id, start: date("2026-06-21T06:30:00+02:00"), end: date("2026-06-21T07:30:00+02:00"),
+      kind: .nap)
+
+    #expect(throws: FamilyStoreError.sleepRefused(.overlaps(night))) { try store.saveSleep(overlapping) }
+    // The store's clock is 07:30, so 07:35 is in the future.
+    let future = Sleep(
+      id: UUID(), childID: mila.id, start: date("2026-06-21T07:00:00+02:00"), end: date("2026-06-21T07:35:00+02:00"),
+      kind: .nap)
+    #expect(throws: FamilyStoreError.sleepRefused(.inTheFuture)) { try store.saveSleep(future) }
+
+    #expect(store.sleeps(of: mila.id) == [night])
+  }
+
+  /// Review focus 2: "Woke earlier?" with a wake-up before the start leaves the sleep running.
+  @Test @MainActor func aRunningSleepSavedWithAnEndBeforeItsStartKeepsRunning() async throws {
+    let store = try await inMemoryStore(now: date("2026-06-21T21:56:00+02:00"))
+    let mila = try await store.add(name: "Mila", birthDate: day(2025, 3, 12), photo: nil)
+    try store.startSleep(childID: mila.id, at: date("2026-06-21T19:42:00+02:00"), kind: .night)
+    let running = try #require(store.sleeps(of: mila.id).first)
+    var woke = running
+    woke.end = date("2026-06-21T19:30:00+02:00")
+
+    #expect(throws: FamilyStoreError.sleepRefused(.tooShort)) { try store.saveSleep(woke) }
+
+    #expect(store.sleeps(of: mila.id) == [running])
+    #expect(store.sleeps(of: mila.id).first?.isRunning == true)
+  }
+
+  @Test @MainActor func aRunningSleepSavedWithAnEarlierStartKeepsRunning() async throws {
+    let store = try await inMemoryStore(now: date("2026-06-21T21:56:00+02:00"))
+    let mila = try await store.add(name: "Mila", birthDate: day(2025, 3, 12), photo: nil)
+    try store.startSleep(childID: mila.id, at: date("2026-06-21T19:42:00+02:00"), kind: .night)
+    var running = try #require(store.sleeps(of: mila.id).first)
+
+    running.start = date("2026-06-21T19:20:00+02:00")
+    try store.saveSleep(running)
+
+    let saved = try #require(store.sleeps(of: mila.id).first)
+    #expect(store.sleeps(of: mila.id).count == 1)
+    #expect(saved.isRunning)
+    #expect(saved.start == date("2026-06-21T19:20:00+02:00"))
+  }
+
+  @Test @MainActor func aRunningSleepSavedWithAnEndKeepsTheNewStartAndKind() async throws {
+    let store = try await inMemoryStore(now: date("2026-06-21T21:56:00+02:00"))
+    let mila = try await store.add(name: "Mila", birthDate: day(2025, 3, 12), photo: nil)
+    try store.startSleep(childID: mila.id, at: date("2026-06-21T19:42:00+02:00"), kind: .night)
+    var woke = try #require(store.sleeps(of: mila.id).first)
+
+    woke.start = date("2026-06-21T19:20:00+02:00")
+    woke.end = date("2026-06-21T21:30:00+02:00")
+    woke.kind = .nap
+    try store.saveSleep(woke)
+
+    #expect(store.sleeps(of: mila.id) == [woke])
+  }
+
+  @Test @MainActor func deleteSleepDeletesItAndAnUnknownIDDoesNothing() async throws {
+    let store = try await inMemoryStore(now: date("2026-06-21T10:00:00+02:00"))
+    let mila = try await store.add(name: "Mila", birthDate: day(2025, 3, 12), photo: nil)
+    try store.startSleep(childID: mila.id, at: date("2026-06-20T19:45:00+02:00"), kind: .night)
+    try store.endSleep(childID: mila.id, at: date("2026-06-21T06:55:00+02:00"))
+    try store.startSleep(childID: mila.id, at: date("2026-06-21T08:00:00+02:00"), kind: .nap)
+    try store.endSleep(childID: mila.id, at: date("2026-06-21T09:00:00+02:00"))
+    let sleeps = store.sleeps(of: mila.id)
+
+    try store.deleteSleep(id: UUID())
+    #expect(store.sleeps(of: mila.id) == sleeps)
+
+    try store.deleteSleep(id: sleeps[0].id)
+    #expect(store.sleeps(of: mila.id) == [sleeps[1]])
+    let request = NSFetchRequest<NSManagedObject>(entityName: "Sleep")
+    #expect(try store.container.viewContext.count(for: request) == 1)
+  }
+
   // MARK: Helpers
 
   private func date(_ iso: String) -> Date {
@@ -258,8 +369,10 @@ import UniformTypeIdentifiers
     return formatter.date(from: iso)!
   }
 
-  @MainActor private func inMemoryStore() async throws -> FamilyStore {
-    try await FamilyStore.load(try FamilyStore.storeDescription(for: testMode, appGroupContainerURL: nil))
+  @MainActor private func inMemoryStore(now: Date? = nil) async throws -> FamilyStore {
+    let description = try FamilyStore.storeDescription(for: testMode, appGroupContainerURL: nil)
+    guard let now else { return try await FamilyStore.load(description) }
+    return try await FamilyStore.load(description, now: { now })
   }
 
   private func day(_ year: Int, _ month: Int, _ day: Int) -> BirthDate {
