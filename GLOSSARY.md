@@ -9,7 +9,7 @@ The local Swift package `Packages/Core`, which holds all pure logic and imports 
 _Avoid_: domain module, model layer
 
 **Test mode**:
-The app mode that CI starts with launch arguments: an in-memory store with the data of a named seed and a fixed clock, with CloudKit and notifications off.
+The app mode that CI starts with launch arguments: in-memory storage with the data of a named seed and a fixed clock. It turns off what a CI run cannot use or must keep still, such as CloudKit, notifications, and animations. The `…Enabled` flags of `AppMode` list each one.
 _Avoid_: demo mode, mock mode, UI test mode
 
 **Screenshot evidence**:
