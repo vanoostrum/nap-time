@@ -30,7 +30,11 @@ enum Theme {
   static let navy = Color(hex: 0x13355C)
   static let navyShadow = Color(hex: 0x0A1F38)
   static let avatarColors = [Color(hex: 0xFF9F68), Color(hex: 0x9FE3C6)]
+  static let inRange = Color(hex: 0x1E7F5C)
   static let tooLittle = Color(hex: 0xC8402A)
+  static let tooMuch = Color(hex: 0x6A4BD8)
+  static let rangeBand = Color(hex: 0xD6F3E6)
+  static let soFar = Color(hex: 0xA9C7E8)
   static let tooLittleShadow = Color(hex: 0x8A2A1B)
   static let handle = Color(hex: 0xC9D6E4)
   static let handleShadow = Color(hex: 0xA9B8C9)

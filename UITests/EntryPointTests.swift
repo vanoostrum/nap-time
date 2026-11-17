@@ -43,7 +43,8 @@ final class EntryPointTests: XCTestCase {
     XCTAssertTrue(driver.button("Sleep time").exists)
     XCTAssertTrue(driver.button("Add a sleep from earlier").exists)
     XCTAssertFalse(driver.app.buttons["Settings"].exists)
-    XCTAssertFalse(driver.app.buttons["Charts"].exists)
+    XCTAssertTrue(driver.button("Today").isSelected)
+    XCTAssertTrue(driver.button("Charts").exists)
     driver.waitForSky("day")
     driver.attachScreenshot("home", to: self)
   }
@@ -105,6 +106,8 @@ final class EntryPointTests: XCTestCase {
     XCTAssertTrue(driver.text(line).exists)
     XCTAssertTrue(driver.button("Sleep time").exists)
     XCTAssertTrue(driver.button("Add a sleep from earlier").exists)
+    XCTAssertTrue(driver.button("Today").isSelected)
+    XCTAssertTrue(driver.button("Charts").exists)
     driver.waitForSky(sky)
     driver.attachScreenshot(entryPoint, to: self)
   }
@@ -254,6 +257,68 @@ final class EntryPointTests: XCTestCase {
     driver.button("Delete Maximiliana Rosalind Pepperpot").tap()
     driver.waitFor(driver.text("Delete Maximiliana Rosalind Pepperpot?"))
     driver.attachScreenshot("delete-child-long-name", to: self)
+  }
+
+  /// `charts`: Mila's whole week on Sunday 8 November at 19:30. Page `charts/week.html`, without "When Mila slept".
+  @MainActor
+  func testCharts() throws {
+    let driver = AppDriver.launch(seed: "week", now: "2026-11-08T19:30:00+01:00")
+    driver.openCharts()
+    driver.waitFor(driver.text("Mila's week"))
+    XCTAssertTrue(driver.text("Mon 2 – Sun 8 Nov").exists)
+    XCTAssertTrue(driver.text("12 h 09 m").exists)
+    XCTAssertTrue(driver.text("range 11–14 h").exists)
+    XCTAssertTrue(driver.text("4 of 7 days").exists)
+    XCTAssertTrue(driver.text("bed ~19:45 · up ~06:30").exists)
+    XCTAssertEqual(driver.bars.count, 7)
+    XCTAssertEqual(
+      driver.barValues, ["in range", "too little", "in range", "in range", "too little", "in range", "too much"])
+    XCTAssertEqual(driver.bars.element(boundBy: 0).label, "Monday 2 Nov, 12 h 36 m")
+    XCTAssertEqual(driver.bars.element(boundBy: 6).label, "Sunday 8 Nov, 14 h 24 m")
+    XCTAssertFalse(driver.text("so far").exists)
+    XCTAssertTrue(driver.button("Previous week").isEnabled)
+    XCTAssertTrue(driver.button("Next week").isEnabled)
+    XCTAssertTrue(driver.button("Charts").isSelected)
+    driver.attachScreenshot("charts", to: self)
+  }
+
+  /// `charts-today`: Mila's current week on Wednesday 11 November at 10:00. Page `charts/week-today.html`,
+  /// without "When Mila slept".
+  @MainActor
+  func testChartsToday() throws {
+    let driver = AppDriver.launch(seed: "week-today", now: "2026-11-11T10:00:00+01:00")
+    driver.openCharts()
+    driver.waitFor(driver.text("Mon 9 – Sun 15 Nov"))
+    XCTAssertTrue(driver.text("11 h 27 m").exists)
+    XCTAssertTrue(driver.text("1 of 2 days").exists)
+    XCTAssertTrue(driver.text("bed ~19:50 · up ~06:30").exists)
+    XCTAssertEqual(driver.barValues, ["in range", "too little", "so far"])
+    XCTAssertEqual(driver.bars.element(boundBy: 2).label, "Wednesday 11 Nov, 10 h 50 m so far")
+    XCTAssertTrue(driver.text("so far").exists)
+    XCTAssertTrue(driver.button("Previous week").isEnabled)
+    XCTAssertFalse(driver.button("Next week").isEnabled)
+    driver.attachScreenshot("charts-today", to: self)
+  }
+
+  /// `charts-empty`: Noah's current week, with no sleeps. Page `charts/empty.html`.
+  @MainActor
+  func testChartsEmpty() throws {
+    let driver = AppDriver.launch(seed: "week", now: "2026-11-11T10:00:00+01:00")
+    driver.button("Noah").tap()
+    driver.waitFor(driver.text("Noah is awake"))
+    driver.openCharts()
+    driver.waitFor(driver.text("Noah's week"))
+    XCTAssertTrue(driver.text("Mon 9 – Sun 15 Nov").exists)
+    XCTAssertEqual(driver.app.staticTexts.matching(NSPredicate(format: "label == %@", "–")).count, 2)
+    XCTAssertTrue(driver.text("range 10–13 h").exists)
+    XCTAssertTrue(driver.text("no sleeps yet").exists)
+    XCTAssertTrue(driver.text("No sleeps this week").exists)
+    XCTAssertTrue(driver.text("Log Noah's sleeps on the Today tab, or add one from earlier.").exists)
+    XCTAssertTrue(driver.button("Add a sleep").exists)
+    XCTAssertEqual(driver.bars.count, 0)
+    XCTAssertTrue(driver.button("Previous week").isEnabled)
+    XCTAssertFalse(driver.button("Next week").isEnabled)
+    driver.attachScreenshot("charts-empty", to: self)
   }
 
   /// A UI test cannot open a Live Activity, so it renders the Lock Screen view (ADR 0003).

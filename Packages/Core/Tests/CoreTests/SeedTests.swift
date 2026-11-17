@@ -66,7 +66,7 @@ import Testing
     #expect(Seed.longName.sleeps.isEmpty)
   }
 
-  @Test(arguments: ["sleeping", "napping", "evening", "winter-morning"])
+  @Test(arguments: ["sleeping", "napping", "evening", "winter-morning", "week", "week-today"])
   func theNewSeedsParse(name: String) throws {
     let mode = try LaunchArguments.parse(["/path/to/NapTime", "--test-mode", "--seed", name])
     guard case .test(let environment) = mode else {
@@ -95,5 +95,90 @@ import Testing
     #expect(status.heading(name: "Mila") == heading)
     #expect(status.line == line)
     #expect(status.sky == sky)
+  }
+
+  // MARK: The week seeds
+
+  @Test func weekIsTheFamilyWithMilasWeekAndOneNapOfNoah() {
+    #expect(Seed.week.children == Seed.family.children)
+    #expect(Seed.week.selectedIndex == 0)
+    #expect(Array(Seed.week.sleeps.prefix(1)) == Seed.family.sleeps)
+    let noah = Seed.week.sleeps.filter { $0.childIndex == 1 }
+    #expect(
+      noah == [
+        SeedSleep(
+          childIndex: 1, start: date("2026-11-03T13:00:00+01:00"), end: date("2026-11-03T14:30:00+01:00"), kind: .nap)
+      ])
+  }
+
+  @Test func weekTodayIsWeekWithMilasSleepsFromMonday9November() {
+    #expect(Seed.weekToday.children == Seed.family.children)
+    #expect(Array(Seed.weekToday.sleeps.prefix(Seed.week.sleeps.count)) == Seed.week.sleeps)
+    let extra = Seed.weekToday.sleeps.dropFirst(Seed.week.sleeps.count)
+    #expect(extra.allSatisfy { $0.childIndex == 0 })
+    #expect(extra.first?.start == date("2026-11-08T19:45:00+01:00"))
+  }
+
+  /// `charts/week.html`: Mila's week on Sunday 8 November at 19:30.
+  @Test func weekMatchesTheChartsWeekPage() {
+    let stats = milasWeek(Seed.week, monday: day(2026, 11, 2), now: "2026-11-08T19:30:00+01:00")
+    #expect(
+      stats.days.map { SleepDuration.text($0.total) } == [
+        "12 h 36 m", "10 h 12 m", "12 h 06 m", "13 h 00 m", "10 h 48 m", "11 h 54 m", "14 h 24 m",
+      ])
+    #expect(stats.days.map(\.judgement) == [.inRange, .tooLittle, .inRange, .inRange, .tooLittle, .inRange, .tooMuch])
+    #expect(abs(stats.days.reduce(0) { $0 + $1.total } / 7 / 60 - 728.57) < 0.01)
+    #expect(stats.averageText == "12 h 09 m")
+    #expect(stats.range.description == "11–14 h")
+    #expect(stats.inRangeText == "4 of 7 days")
+    #expect(milasBedtime(Seed.week, monday: day(2026, 11, 2)).note == "bed ~19:45 · up ~06:30")
+  }
+
+  /// `charts/week-today.html`: Mila's week on Wednesday 11 November at 10:00.
+  @Test func weekTodayMatchesTheChartsWeekTodayPage() {
+    let stats = milasWeek(Seed.weekToday, monday: day(2026, 11, 9), now: "2026-11-11T10:00:00+01:00")
+    #expect(stats.days.prefix(3).map { SleepDuration.text($0.total) } == ["12 h 15 m", "10 h 39 m", "10 h 50 m"])
+    #expect(stats.days.map(\.state) == [.counted, .counted, .soFar, .empty, .empty, .empty, .empty])
+    #expect(stats.days.prefix(2).map(\.judgement) == [.inRange, .tooLittle])
+    #expect(stats.averageText == "11 h 27 m")
+    #expect(stats.inRangeText == "1 of 2 days")
+    #expect(milasBedtime(Seed.weekToday, monday: day(2026, 11, 9)).note == "bed ~19:50 · up ~06:30")
+    let now = date("2026-11-11T10:00:00+01:00")
+    #expect(Week.opening(now: now, in: amsterdam).monday == day(2026, 11, 9))
+    #expect(Week.current(now: now, in: amsterdam).monday == day(2026, 11, 9))
+  }
+
+  /// `charts/empty.html`: Noah's week on Wednesday 11 November at 10:00.
+  @Test func noahsCurrentWeekIsEmptyAndHisArrowsGoBackToHisNap() {
+    let childID = UUID()
+    let sleeps = sleeps(of: 1, in: Seed.week, childID: childID)
+    let now = date("2026-11-11T10:00:00+01:00")
+    let week = Week.opening(now: now, in: amsterdam)
+    let stats = WeekStats(
+      week: week, sleeps: sleeps, birthDate: Seed.week.children[1].birthDate, now: now, in: amsterdam)
+    #expect(!stats.hasSleep)
+    #expect(stats.range.description == "10–13 h")
+    #expect(week.title == "Mon 9 – Sun 15 Nov")
+    let weeks = Week.reachable(firstSleepStart: sleeps.map(\.start).min(), now: now, in: amsterdam)
+    #expect(weeks.lowerBound.monday == day(2026, 11, 2))
+    #expect(weeks.upperBound == week)
+  }
+
+  private func sleeps(of childIndex: Int, in seed: Seed, childID: UUID) -> [Sleep] {
+    seed.sleeps.filter { $0.childIndex == childIndex }.map {
+      Sleep(id: UUID(), childID: childID, start: $0.start, end: $0.end, kind: $0.kind)
+    }
+  }
+
+  private func milasWeek(_ seed: Seed, monday: BirthDate, now: String) -> WeekStats {
+    WeekStats(
+      week: Week(containing: SleepDay(named: monday)), sleeps: sleeps(of: 0, in: seed, childID: UUID()),
+      birthDate: seed.children[0].birthDate, now: date(now), in: amsterdam)
+  }
+
+  private func milasBedtime(_ seed: Seed, monday: BirthDate) -> UsualBedtime {
+    let week = Week(containing: SleepDay(named: monday))
+    let nights = UsualBedtime.nights(of: sleeps(of: 0, in: seed, childID: UUID()), in: week, timeZone: amsterdam)
+    return UsualBedtime(nights: nights, in: amsterdam)
   }
 }

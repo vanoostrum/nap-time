@@ -64,6 +64,10 @@ _Avoid_: calendar day, 24-hour period
 Seven sleep days, from Monday to Sunday.
 _Avoid_: 7 days, rolling week
 
+**Counted day**:
+A sleep day that has ended and has at least one sleep. The average and "In range" use only counted days.
+_Avoid_: logged day, full day
+
 **Recommended range**:
 The total hours of sleep per sleep day, naps included, that the guidelines recommend for the child's age.
 _Avoid_: target, norm, goal, age range
@@ -73,11 +77,11 @@ A sleep day whose total sleep lies inside the child's recommended range. Otherwi
 _Avoid_: on target, OK day
 
 **Usual bedtime**:
-The middle start time of the child's recent nights.
+The middle start time of a set of the child's nights: the nights of the shown week on the charts, or of the last 7 days for a nudge.
 _Avoid_: average bedtime, typical bedtime
 
 **Usual wake-up time**:
-The middle end time of the child's nights in the week.
+The middle end time of the child's ended nights in the shown week.
 _Avoid_: average wake time
 
 **Bedtime window**:

@@ -4,7 +4,8 @@ import OSLog
 import SwiftUI
 import UIKit
 
-/// Loads the family store, then shows "Add your child" when there is no child, or the home screen.
+/// Loads the family store, then shows "Add your child" when there is no child, or the home screen
+/// and the Charts screen with their tab bar.
 struct RootView: View {
   let mode: AppMode
 
@@ -12,6 +13,7 @@ struct RootView: View {
   /// The child chosen on this phone. `SelectedChild` decides which child the home screen shows.
   @State private var selectedID: Child.ID?
   @State private var cover: Cover?
+  @State private var tab = AppTab.today
 
   private enum Phase {
     case loading
@@ -76,6 +78,7 @@ struct RootView: View {
           onSave: { name, birthDate, photo in
             let child = try await store.add(name: name, birthDate: birthDate, photo: photo)
             select(child.id)
+            tab = .today
           })
       } else {
         // The status line, the totals, and the sky update every minute, so the sky changes within a minute
@@ -83,18 +86,29 @@ struct RootView: View {
         TimelineView(.everyMinute) { context in
           let now = fixedNow ?? context.date
           let selected = SelectedChild.id(saved: selectedID, in: store.children)
-          HomeView(
-            children: store.children,
-            selectedID: selected,
-            status: selected.map { ChildStatus(sleeps: store.sleeps(of: $0), now: now, in: calendar.timeZone) },
-            onSelect: select,
-            onAdd: { cover = .addAnother },
-            onEdit: { cover = .edit($0) },
-            onSleep: { if let selected { startSleep(selected, store: store) } },
-            onWake: { if let selected { endSleep(selected, store: store) } },
-            onSleepLink: { if let selected { openSleepLink(selected, store: store, now: now) } },
-            onStatusLine: selected.flatMap { statusLineAction($0, store: store) }
-          )
+          if tab == .charts, let child = store.children.first(where: { $0.id == selected }) {
+            ChartsView(
+              child: child, sleeps: store.sleeps(of: child.id), now: now, timeZone: calendar.timeZone,
+              onAddSleep: { cover = .sleep(.new($0, childID: child.id)) },
+              onTab: { tab = $0 }
+            )
+            // A new child opens Charts on the opening week again.
+            .id(child.id)
+          } else {
+            HomeView(
+              children: store.children,
+              selectedID: selected,
+              status: selected.map { ChildStatus(sleeps: store.sleeps(of: $0), now: now, in: calendar.timeZone) },
+              onSelect: select,
+              onAdd: { cover = .addAnother },
+              onEdit: { cover = .edit($0) },
+              onSleep: { if let selected { startSleep(selected, store: store) } },
+              onWake: { if let selected { endSleep(selected, store: store) } },
+              onSleepLink: { if let selected { openSleepLink(selected, store: store, now: now) } },
+              onStatusLine: selected.flatMap { statusLineAction($0, store: store) },
+              onTab: { tab = $0 }
+            )
+          }
         }
         .fullScreenCover(item: $cover) { cover in
           coverView(cover, store: store)
