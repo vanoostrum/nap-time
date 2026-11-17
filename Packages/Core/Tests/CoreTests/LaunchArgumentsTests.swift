@@ -98,6 +98,58 @@ import Testing
     #expect(error.description.contains("tomorrow"))
   }
 
+  @Test func seedIsNoneByDefault() throws {
+    let mode = try LaunchArguments.parse([executable, "--test-mode"])
+    #expect(mode == .test(.standard))
+    #expect(TestEnvironment.standard.seed == .none)
+    #expect(Seed.none.children.isEmpty)
+    #expect(Seed.none.selectedIndex == nil)
+  }
+
+  @Test func familySeedHasMilaSelectedAndNoahWithADrawnPhoto() throws {
+    let mode = try LaunchArguments.parse([executable, "--test-mode", "--seed", "family"])
+    guard case .test(let environment) = mode else {
+      Issue.record("Expected test mode, got \(mode)")
+      return
+    }
+    #expect(environment.seed == .family)
+    let children = Seed.family.children
+    #expect(children.map(\.name) == ["Mila", "Noah"])
+    #expect(children.map(\.birthDate) == [day(2025, 3, 12), day(2022, 2, 10)])
+    #expect(children.map(\.drawsPhoto) == [false, true])
+    #expect(Seed.family.selectedIndex == 0)
+  }
+
+  @Test func longNameSeedHasOneChildWith30Characters() throws {
+    let mode = try LaunchArguments.parse([executable, "--test-mode", "--seed", "long-name"])
+    guard case .test(let environment) = mode else {
+      Issue.record("Expected test mode, got \(mode)")
+      return
+    }
+    #expect(environment.seed == .longName)
+    let children = Seed.longName.children
+    #expect(children.map(\.name) == ["Maximiliana Rosalind Pepperpot"])
+    #expect(children.first?.name.count == 30)
+    #expect(children.first?.birthDate == day(2025, 3, 12))
+    #expect(children.first?.drawsPhoto == false)
+    #expect(Seed.longName.selectedIndex == 0)
+  }
+
+  @Test func seedWithoutTestModeIsIgnored() throws {
+    #expect(try LaunchArguments.parse([executable, "--seed", "nonsense"]) == .normal)
+  }
+
+  @Test func unknownOrMissingSeedNamesTheArgument() {
+    #expect(throws: LaunchArgumentError(argument: "--seed", value: "families")) {
+      try LaunchArguments.parse([executable, "--test-mode", "--seed", "families"])
+    }
+    #expect(throws: LaunchArgumentError(argument: "--seed", value: nil)) {
+      try LaunchArguments.parse([executable, "--test-mode", "--seed"])
+    }
+    #expect(
+      LaunchArgumentError(argument: "--seed", value: "x").description.hasPrefix("Bad value for launch argument --seed"))
+  }
+
   private func date(_ iso: String) -> Date {
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime]
