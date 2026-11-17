@@ -43,10 +43,12 @@ struct RootView: View {
     return calendar
   }
 
-  private var today: BirthDate {
-    if case .test(let environment) = mode { return BirthDate(environment.now, in: calendar) }
-    return BirthDate(Date(), in: calendar)
+  /// The fixed clock of test mode, or `nil` in the normal mode.
+  private var fixedNow: Date? {
+    if case .test(let environment) = mode { environment.now } else { nil }
   }
+
+  private var today: BirthDate { BirthDate(fixedNow ?? Date(), in: calendar) }
 
   var body: some View {
     content
@@ -71,13 +73,21 @@ struct RootView: View {
             select(child.id)
           })
       } else {
-        HomeView(
-          children: store.children,
-          selectedID: SelectedChild.id(saved: selectedID, in: store.children),
-          onSelect: select,
-          onAdd: { cover = .addAnother },
-          onEdit: { cover = .edit($0) }
-        )
+        // The status line and the totals update every minute. In test mode the clock stays at `--now`.
+        TimelineView(.everyMinute) { context in
+          let now = fixedNow ?? context.date
+          let selected = SelectedChild.id(saved: selectedID, in: store.children)
+          HomeView(
+            children: store.children,
+            selectedID: selected,
+            status: selected.map { ChildStatus(sleeps: store.sleeps(of: $0), now: now, in: calendar.timeZone) },
+            onSelect: select,
+            onAdd: { cover = .addAnother },
+            onEdit: { cover = .edit($0) },
+            onSleep: { if let selected { startSleep(selected, store: store) } },
+            onWake: { if let selected { endSleep(selected, store: store) } }
+          )
+        }
         .fullScreenCover(item: $cover) { cover in
           coverView(cover, store: store)
         }
@@ -117,6 +127,25 @@ struct RootView: View {
     }
   }
 
+  /// "Sleep time": starts a running sleep now, a night or a nap by the time of day.
+  private func startSleep(_ childID: Child.ID, store: FamilyStore) {
+    let now = fixedNow ?? Date()
+    do {
+      try store.startSleep(childID: childID, at: now, kind: SleepKind.guess(start: now, in: calendar.timeZone))
+    } catch {
+      Self.logger.error("Sleep time failed: \(String(describing: error), privacy: .public)")
+    }
+  }
+
+  /// "Wake up": ends the running sleep now.
+  private func endSleep(_ childID: Child.ID, store: FamilyStore) {
+    do {
+      try store.endSleep(childID: childID, at: fixedNow ?? Date())
+    } catch {
+      Self.logger.error("Wake up failed: \(String(describing: error), privacy: .public)")
+    }
+  }
+
   private func select(_ id: Child.ID) {
     selectedID = id
     // Test mode does not read or write user defaults, so every run starts the same.
@@ -125,7 +154,7 @@ struct RootView: View {
     }
   }
 
-  /// Loads the family store. In test mode it adds the children of the seed first.
+  /// Loads the family store. In test mode it adds the children and the sleeps of the seed first.
   /// On failure, it logs the error and keeps the home screen with the sky.
   private func loadStore() async {
     do {
@@ -138,6 +167,12 @@ struct RootView: View {
         for child in environment.seed.children {
           let photo = child.drawsPhoto ? SeedPhoto.pngData() : nil
           ids.append(try await store.add(name: child.name, birthDate: child.birthDate, photo: photo).id)
+        }
+        for sleep in environment.seed.sleeps {
+          try store.startSleep(childID: ids[sleep.childIndex], at: sleep.start, kind: sleep.kind)
+          if let end = sleep.end {
+            try store.endSleep(childID: ids[sleep.childIndex], at: end)
+          }
         }
         selectedID = environment.seed.selectedIndex.map { ids[$0] }
       } else {

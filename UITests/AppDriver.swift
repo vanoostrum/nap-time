@@ -5,13 +5,25 @@ import XCTest
 struct AppDriver {
   let app = XCUIApplication()
 
-  /// Starts the app with `--test-mode --seed <seed>` and the default test time.
+  /// Starts the app with `--test-mode --seed <seed>`, and `--now <now>` when given,
+  /// else the default test time.
   @discardableResult
-  static func launch(seed: String) -> AppDriver {
+  static func launch(seed: String, now: String? = nil) -> AppDriver {
     let driver = AppDriver()
-    driver.app.launchArguments = ["--test-mode", "--seed", seed]
+    driver.app.launchArguments = ["--test-mode", "--seed", seed] + (now.map { ["--now", $0] } ?? [])
     driver.app.launch()
     return driver
+  }
+
+  /// The sky behind the home screen. Its value is "day" or "night".
+  var sky: XCUIElement { app.descendants(matching: .any)["sky"] }
+
+  /// Waits until the sky has this value, and fails the test when it does not.
+  func waitForSky(_ value: String, file: StaticString = #filePath, line: UInt = #line) {
+    waitFor(sky, file: file, line: line)
+    let matches = NSPredicate(format: "value == %@", value)
+    let result = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: matches, object: sky)], timeout: 10)
+    XCTAssertEqual(result, .completed, "The sky is \(sky.value ?? "nil"), not \(value)", file: file, line: line)
   }
 
   func text(_ label: String) -> XCUIElement { app.staticTexts[label] }

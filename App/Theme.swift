@@ -11,6 +11,18 @@ enum Theme {
   static let sun = Color(hex: 0xFFD23F)
   static let dayHillBack = Color(hex: 0x86D27E)
   static let dayHillFront = Color(hex: 0x4DAE5B)
+  static let nightSkyTop = Color(hex: 0x070B24)
+  static let nightSkyMid = Color(hex: 0x121A3A)
+  static let nightSkyLow = Color(hex: 0x24305E)
+  static let star = Color(hex: 0xF2E3B8)
+  static let moon = Color(hex: 0xE9C77B)
+  static let nightHillBack = Color(hex: 0x22405A)
+  static let nightHillFront = Color(hex: 0x183248)
+  static let cream = Color(hex: 0xE9DFC8)
+  static let gold = Color(hex: 0xF2C879)
+  static let goldShadow = Color(hex: 0x9C7A36)
+  static let nightTab = Color(hex: 0x2A3360)
+  static let avatarNightColors = [Color(hex: 0x6E4A3A), Color(hex: 0x2E5248)]
   static let navy = Color(hex: 0x13355C)
   static let navyShadow = Color(hex: 0x0A1F38)
   static let avatarColors = [Color(hex: 0xFF9F68), Color(hex: 0x9FE3C6)]
@@ -21,7 +33,10 @@ enum Theme {
   static let scrim = Color(red: 10 / 255, green: 25 / 255, blue: 50 / 255).opacity(0.45)
 
   /// The colour of a child's avatar: the colours alternate in the order of the children.
-  static func avatarColor(at index: Int) -> Color { avatarColors[index % avatarColors.count] }
+  static func avatarColor(at index: Int, sky: Sky = .day) -> Color {
+    let colors = sky == .night ? avatarNightColors : avatarColors
+    return colors[index % colors.count]
+  }
 }
 
 /// The static weights of Baloo 2 that the app bundles, made from `design/fonts/baloo2-latin.woff2`.
@@ -73,10 +88,11 @@ struct ChildPicture: View {
   let child: Child?
   let index: Int
   let letterSize: CGFloat
+  var sky = Sky.day
 
   var body: some View {
     ZStack {
-      Circle().fill(Theme.avatarColor(at: index))
+      Circle().fill(Theme.avatarColor(at: index, sky: sky))
       if let photo = child?.photo, let image = UIImage(data: photo) {
         Image(uiImage: image)
           .resizable()
@@ -84,7 +100,7 @@ struct ChildPicture: View {
       } else {
         Text(child?.initial ?? "")
           .font(.baloo(letterSize, .extraBold))
-          .foregroundStyle(Theme.navy)
+          .foregroundStyle(sky == .night ? Theme.cream : Theme.navy)
       }
     }
     .clipShape(Circle())
