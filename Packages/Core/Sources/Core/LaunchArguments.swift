@@ -22,12 +22,14 @@ public struct LaunchArgumentError: Error, Equatable, CustomStringConvertible {
 /// - `--test-mode` starts test mode.
 /// - `--now <ISO 8601 date with a UTC offset>` replaces the fixed clock in test mode.
 /// - `--location <latitude>,<longitude>` replaces the fixed location in test mode.
+/// - `--seed <none|family|long-name>` picks the data that test mode starts with. The default is `none`.
 ///
-/// Without `--test-mode`, `--now` and `--location` are ignored and not checked.
+/// Without `--test-mode`, `--now`, `--location`, and `--seed` are ignored and not checked.
 public enum LaunchArguments {
   public static let testMode = "--test-mode"
   public static let now = "--now"
   public static let location = "--location"
+  public static let seed = "--seed"
 
   public static func parse(_ arguments: [String]) throws(LaunchArgumentError) -> AppMode {
     guard arguments.contains(testMode) else { return .normal }
@@ -42,6 +44,10 @@ public enum LaunchArguments {
         throw LaunchArgumentError(argument: location, value: raw)
       }
       environment.location = coordinate
+    }
+    if let raw = try value(of: seed, in: arguments) {
+      guard let value = Seed(rawValue: raw) else { throw LaunchArgumentError(argument: seed, value: raw) }
+      environment.seed = value
     }
     return .test(environment)
   }
