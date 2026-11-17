@@ -47,4 +47,4 @@ xcodebuild test -project NapTime.xcodeproj -scheme NapTime \
 
 In CI, the workflow `CI` (`.github/workflows/ci.yml`) runs the checks `Core (Linux)`, `App (iOS)`, and `Screenshots`. A cloud agent proves CI with the `verify` skill and screens with the `drive-app` skill.
 
-Test mode: launch the app with `--test-mode`, and optionally `--now <ISO 8601 date with a UTC offset>` and `--location <lat>,<lon>`. Core's `LaunchArguments` parses them.
+Test mode: launch the app with `--test-mode`, and optionally `--now <ISO 8601 date with a UTC offset>` and `--seed <name>`. Core's `LaunchArguments` parses them.
