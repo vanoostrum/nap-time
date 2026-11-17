@@ -26,7 +26,7 @@ On Linux (the cloud agents) and on macOS:
 
 ```bash
 scripts/verify.sh                    # on Linux, installs Swift from .swift-version if needed; then lint, build and test Core
-bash scripts/cloud-setup.sh          # installs Swift from .swift-version on Linux; runs from any folder; verify.sh runs it for you
+bash scripts/cloud-setup.sh          # installs Swift from .swift-version on Ubuntu 24.04 and checks its signature; runs from any folder; verify.sh runs it for you
 swift format lint --strict --recursive .
 swift format -i --recursive <paths>  # fix the format
 swift build --package-path Packages/Core
