@@ -13,12 +13,12 @@ import Testing
     #expect(mode.areNotificationsEnabled)
   }
 
-  @Test func nowAndLocationWithoutTestModeAreIgnoredEvenWhenBad() throws {
-    let mode = try LaunchArguments.parse([executable, "--now", "yesterday", "--location", "north"])
+  @Test func nowWithoutTestModeIsIgnoredEvenWhenBad() throws {
+    let mode = try LaunchArguments.parse([executable, "--now", "yesterday"])
     #expect(mode == .normal)
   }
 
-  @Test func testModeGivesTheFixedClockAndLocation() throws {
+  @Test func testModeGivesTheFixedClock() throws {
     let mode = try LaunchArguments.parse([executable, "--test-mode"])
     guard case .test(let environment) = mode else {
       Issue.record("Expected test mode, got \(mode)")
@@ -29,19 +29,15 @@ import Testing
     #expect(!mode.areNotificationsEnabled)
     #expect(environment.now == date("2026-06-21T10:00:00+02:00"))
     #expect(environment.timeZone.identifier == "Europe/Amsterdam")
-    #expect(environment.location == Coordinate(latitude: 52.3676, longitude: 4.9041))
   }
 
-  @Test func nowAndLocationReplaceTheFixedValuesInTestMode() throws {
-    let mode = try LaunchArguments.parse([
-      executable, "--test-mode", "--now", "2026-12-24T21:30:00-05:00", "--location", "-33.8688,151.2093",
-    ])
+  @Test func nowReplacesTheFixedClockInTestMode() throws {
+    let mode = try LaunchArguments.parse([executable, "--test-mode", "--now", "2026-12-24T21:30:00-05:00"])
     guard case .test(let environment) = mode else {
       Issue.record("Expected test mode, got \(mode)")
       return
     }
     #expect(environment.now == date("2026-12-25T02:30:00Z"))
-    #expect(environment.location == Coordinate(latitude: -33.8688, longitude: 151.2093))
     #expect(environment.timeZone.identifier == "Europe/Amsterdam")
   }
 
@@ -52,8 +48,7 @@ import Testing
         == .test(
           TestEnvironment(
             now: date("2026-01-01T07:00:00Z"),
-            timeZone: TimeZone(identifier: "Europe/Amsterdam")!,
-            location: .amsterdam
+            timeZone: TimeZone(identifier: "Europe/Amsterdam")!
           )))
   }
 
@@ -69,26 +64,20 @@ import Testing
     }
   }
 
-  @Test(arguments: [
-    "52.3676",
-    "52.3676,4.9041,0",
-    "north,east",
-    "91,0",
-    "0,181",
-    "",
-  ])
-  func badLocationNamesTheArgument(value: String) {
-    #expect(throws: LaunchArgumentError(argument: "--location", value: value)) {
-      try LaunchArguments.parse([executable, "--test-mode", "--location", value])
-    }
+  /// The app has no location (ADR 0007), so `--location` is an unknown argument, and test mode ignores it.
+  @Test(arguments: [["--location", "1,2"], ["--location", "north"], ["--location"]])
+  func locationIsIgnoredInTestMode(location: [String]) throws {
+    #expect(try LaunchArguments.parse([executable, "--test-mode"] + location) == .test(.standard))
+    #expect(
+      try LaunchArguments.parse([executable, "--test-mode", "--seed", "family"] + location)
+        == .test(
+          TestEnvironment(now: TestEnvironment.standard.now, timeZone: TestEnvironment.standard.timeZone, seed: .family)
+        ))
   }
 
   @Test func missingValueNamesTheArgument() {
     #expect(throws: LaunchArgumentError(argument: "--now", value: nil)) {
       try LaunchArguments.parse([executable, "--test-mode", "--now"])
-    }
-    #expect(throws: LaunchArgumentError(argument: "--location", value: nil)) {
-      try LaunchArguments.parse([executable, "--test-mode", "--location", "--now", "2026-01-01T07:00:00Z"])
     }
   }
 
