@@ -105,3 +105,5 @@ _Avoid_: day details, popup, modal
 **Sleep timer**:
 The Lock Screen and Dynamic Island view of a running sleep, with an "Awake" button.
 _Avoid_: Live Activity view, widget
+
+<!-- TEMPORARY CRAFT-64 proof. -->

@@ -5,3 +5,5 @@ The agents have no simulator, and in one-shot mode no merge gate shows the scree
 The `Screenshots` job pushes the PNG files to the branch `screenshots/<branch>`, in the folder `<head sha>/`, and also uploads the `screenshots` artifact. The cloud agents cannot reach the artifact host, so they read the screenshots from the branch. Each run replaces the branch.
 
 To keep the job short, it builds for testing while the simulator boots, and runs a failed UI test once more in the same run. A test that passes only on the retry passes the job with a warning. A Linux job first checks the changed paths of a PR. When the PR changes only docs, the design gallery, craft files, Markdown, or scripts that the job does not run, the `Screenshots` job is skipped, and GitHub counts it as passed. A push to `main` always runs it.
+
+<!-- TEMPORARY CRAFT-64 proof: a docs-only change. Never merged. -->
