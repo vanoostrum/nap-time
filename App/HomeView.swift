@@ -19,6 +19,9 @@ struct HomeView: View {
 
   /// Counts taps on the main button, for the haptic tap.
   @State private var mainButtonTaps = 0
+  /// When the main button last took a tap. "Wake up" replaces "Sleep time" in the same place,
+  /// so a fast second tap would end the sleep it just started; such a tap is ignored.
+  @State private var lastMainButtonTap = Date.distantPast
 
   private var selectedIndex: Int? { children.firstIndex { $0.id == selectedID } }
   private var sky: Sky { status?.sky ?? .day }
@@ -130,6 +133,9 @@ struct HomeView: View {
   private func mainButton(_ child: Child, status: ChildStatus) -> some View {
     let sleeping = status.isSleeping
     return Button {
+      let now = Date()
+      guard now.timeIntervalSince(lastMainButtonTap) >= 1 else { return }
+      lastMainButtonTap = now
       mainButtonTaps += 1
       sleeping ? onWake() : onSleep()
     } label: {

@@ -24,6 +24,20 @@ final class SleepFlowTests: XCTestCase {
     XCTAssertTrue(driver.button("Sleep time").exists)
   }
 
+  /// Review focus 3: two fast taps make one running sleep. The second tap must not hit "Wake up".
+  @MainActor
+  func testADoubleTapOnSleepTimeStartsOneSleep() throws {
+    let driver = AppDriver.launch(seed: "family")
+    driver.waitFor(driver.button("Sleep time"))
+    driver.button("Sleep time").doubleTap()
+    driver.waitFor(driver.text("Mila is sleeping"))
+    // Wait past the time in which a tap is ignored, then check that the sleep still runs.
+    Thread.sleep(forTimeInterval: 2)
+    XCTAssertTrue(driver.text("Mila is sleeping").exists)
+    XCTAssertTrue(driver.text("0 m · since 10:00").exists)
+    XCTAssertTrue(driver.button("Wake up").exists)
+  }
+
   @MainActor
   func testWakeUpFromANapKeepsTheNap() throws {
     let driver = AppDriver.launch(seed: "napping", now: "2026-06-21T13:50:00+02:00")
