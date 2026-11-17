@@ -26,7 +26,10 @@ struct AppDriver {
     XCTAssertEqual(result, .completed, "The sky is \(sky.value ?? "nil"), not \(value)", file: file, line: line)
   }
 
-  func text(_ label: String) -> XCUIElement { app.staticTexts[label] }
+  /// An element with this label: a text, or a button whose label is that text, such as the status line.
+  func text(_ label: String) -> XCUIElement {
+    app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label)).firstMatch
+  }
 
   func button(_ label: String) -> XCUIElement { app.buttons[label] }
 
@@ -91,6 +94,31 @@ struct AppDriver {
       avatar.press(forDuration: 1.2)
     }
     waitFor(text("Edit child"))
+  }
+
+  /// Taps the home screen's status line, which opens the running sleep or the last sleep.
+  func tapStatusLine(_ line: String) {
+    let status = app.buttons["status-line"]
+    waitFor(status)
+    XCTAssertEqual(status.label, line)
+    status.tap()
+    waitFor(app.descendants(matching: .any)["sleep-form"])
+  }
+
+  /// Taps "Add a sleep from earlier" or "Woke earlier? Set the time" below the main button.
+  func tapSleepLink(_ label: String) {
+    let link = button(label)
+    waitFor(link)
+    link.tap()
+    waitFor(app.descendants(matching: .any)["sleep-form"])
+  }
+
+  /// Waits until the sleep form has closed.
+  func waitForFormToClose(file: StaticString = #filePath, line: UInt = #line) {
+    XCTAssertTrue(
+      app.descendants(matching: .any)["sleep-form"].waitForNonExistence(timeout: 10), "The sleep form is still open",
+      file: file,
+      line: line)
   }
 
   func attachScreenshot(_ entryPoint: String, to testCase: XCTestCase) {
