@@ -16,14 +16,14 @@ run() {
 }
 
 version="$(tr -d '[:space:]' < .swift-version)"
-swiftly_dir="$HOME/.local/share/swiftly"
+install_dir="$HOME/.local/share/swift/$version"
 
 # Swift is at the right version when it prints "Swift version <v>", with no more digits or dots
 # after <v>, and cloud-setup.sh has written its done marker for <v>.
 swift_is_right() {
   local out
   out="$(swift --version 2>&1)" || return 1
-  [ -f "$swiftly_dir/.done-$version" ] \
+  [ -f "$install_dir/.done" ] \
     && grep -Eq "Swift version ${version//./\\.}([^0-9.]|$)" <<< "$out"
 }
 
@@ -38,7 +38,7 @@ check_swift() {
 if [ "$(uname -s)" = "Linux" ]; then
   if ! swift_is_right; then
     run "Install Swift" bash scripts/cloud-setup.sh
-    export PATH="$swiftly_dir/bin:$PATH"
+    export PATH="$install_dir/usr/bin:$PATH"
   fi
   run "Swift version" check_swift
 else

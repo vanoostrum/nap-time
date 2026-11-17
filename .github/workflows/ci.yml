@@ -23,15 +23,15 @@ jobs:
       - name: Cache Swift
         uses: actions/cache@v4
         with:
-          path: ~/.local/share/swiftly
-          # -v2: caches from before the done marker of cloud-setup.sh do not count as an install.
-          key: swiftly-${{ runner.os }}-${{ hashFiles('.swift-version') }}-v2
+          path: ~/.local/share/swift
+          # -v3: the install folder moved from swiftly to ~/.local/share/swift/<version> (CRAFT-58).
+          key: swift-${{ runner.os }}-${{ hashFiles('.swift-version') }}-v3
       # The same script that installs Swift when a cloud agent runs scripts/verify.sh.
       - name: Install Swift from .swift-version
         run: |
           bash scripts/cloud-setup.sh
-          echo "$HOME/.local/share/swiftly/bin" >> "$GITHUB_PATH"
-      # swiftly can rewrite .swift-version (CRAFT-42). The install must leave the checkout unchanged.
+          echo "$HOME/.local/share/swift/$(tr -d '[:space:]' < .swift-version)/usr/bin" >> "$GITHUB_PATH"
+      # The install must leave the checkout unchanged (CRAFT-42).
       - name: Check that the Swift install left the checkout clean
         run: |
           changes="$(git status --porcelain)"
