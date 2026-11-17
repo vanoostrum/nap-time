@@ -22,7 +22,7 @@ public struct LaunchArgumentError: Error, Equatable, CustomStringConvertible {
 /// - `--test-mode` starts test mode.
 /// - `--now <ISO 8601 date with a UTC offset>` replaces the fixed clock in test mode.
 /// - `--location <latitude>,<longitude>` replaces the fixed location in test mode.
-/// - `--seed <none|family|long-name>` picks the data that test mode starts with. The default is `none`.
+/// - `--seed <none|family|long-name|sleeping|napping>` picks the data that test mode starts with. The default is `none`.
 ///
 /// Without `--test-mode`, `--now`, `--location`, and `--seed` are ignored and not checked.
 public enum LaunchArguments {
