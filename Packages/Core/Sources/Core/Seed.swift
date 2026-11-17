@@ -12,13 +12,19 @@ public enum Seed: String, CaseIterable, Sendable {
   case sleeping
   /// `family`, and Mila naps since 21 June 2026 13:05. Pass `--now 2026-06-21T13:50:00+02:00`.
   case napping
+  /// `family`, and Mila napped on 21 June 2026 from 14:15 to 15:10. Pass `--now 2026-06-21T22:05:00+02:00` (sunset)
+  /// or `--now 2026-06-21T23:30:00+02:00` (night).
+  case evening
+  /// `family`, with only Mila's night from 14 November 2026 19:48 to 15 November 06:40.
+  /// Pass `--now 2026-11-15T08:00:00+01:00` (sunrise).
+  case winterMorning = "winter-morning"
 
   /// The children, in the order that test mode adds them.
   public var children: [SeedChild] {
     switch self {
     case .none:
       []
-    case .family, .sleeping, .napping:
+    case .family, .sleeping, .napping, .evening, .winterMorning:
       [
         SeedChild(name: "Mila", birthDate: BirthDate(year: 2025, month: 3, day: 12)!, drawsPhoto: false),
         SeedChild(name: "Noah", birthDate: BirthDate(year: 2022, month: 2, day: 10)!, drawsPhoto: true),
@@ -32,26 +38,41 @@ public enum Seed: String, CaseIterable, Sendable {
     }
   }
 
-  /// The sleeps, in the order that test mode adds them. The times are in Europe/Amsterdam (UTC+2 in June).
+  /// The sleeps, in the order that test mode adds them. The times are in Europe/Amsterdam.
   public var sleeps: [SeedSleep] {
     let lastNight = SeedSleep(
-      childIndex: 0, start: Self.june21(hour: -5, minute: 45), end: Self.june21(hour: 6, minute: 55), kind: .night)
+      childIndex: 0, start: Self.instant("2026-06-20T19:45:00+02:00"), end: Self.instant("2026-06-21T06:55:00+02:00"),
+      kind: .night)
     switch self {
     case .none, .longName:
       return []
     case .family:
       return [lastNight]
     case .sleeping:
-      return [lastNight, SeedSleep(childIndex: 0, start: Self.june21(hour: 19, minute: 42), end: nil, kind: .night)]
+      return [
+        lastNight, SeedSleep(childIndex: 0, start: Self.instant("2026-06-21T19:42:00+02:00"), end: nil, kind: .night),
+      ]
     case .napping:
-      return [lastNight, SeedSleep(childIndex: 0, start: Self.june21(hour: 13, minute: 5), end: nil, kind: .nap)]
+      return [
+        lastNight, SeedSleep(childIndex: 0, start: Self.instant("2026-06-21T13:05:00+02:00"), end: nil, kind: .nap),
+      ]
+    case .evening:
+      let nap = SeedSleep(
+        childIndex: 0, start: Self.instant("2026-06-21T14:15:00+02:00"), end: Self.instant("2026-06-21T15:10:00+02:00"),
+        kind: .nap)
+      return [lastNight, nap]
+    case .winterMorning:
+      return [
+        SeedSleep(
+          childIndex: 0, start: Self.instant("2026-11-14T19:48:00+01:00"),
+          end: Self.instant("2026-11-15T06:40:00+01:00"), kind: .night)
+      ]
     }
   }
 
-  /// 21 June 2026 at `hour`:`minute` in UTC+2. A negative hour is on 20 June.
-  private static func june21(hour: Int, minute: Int) -> Date {
-    let midnight = 1_781_992_800  // 2026-06-21T00:00:00+02:00
-    return Date(timeIntervalSince1970: TimeInterval(midnight + hour * 3600 + minute * 60))
+  /// An ISO 8601 date and time with a UTC offset, written in this file.
+  private static func instant(_ iso: String) -> Date {
+    ISO8601DateFormatter().date(from: iso)!
   }
 
   /// The index in `children` of the selected child.

@@ -18,6 +18,9 @@ Each one starts the app with `--test-mode`, its seed, and the default test time 
 - `home`: `--seed family`, with Mila selected. The day sky, the child switcher with "+", "Mila is awake", "since 06:55 · 11 h 10 m slept today", "Sleep time", and "Add a sleep from earlier". Page `home/day.html`, without the gear and the Charts tab. Test: `EntryPointTests.testHome`.
 - `home-sleeping`: `--seed sleeping --now 2026-06-21T21:56:00+02:00`. The night sky, "Mila is sleeping", "2 h 14 m · since 19:42", "Wake up", and "Woke earlier? Set the time". Page `home/night.html`, without the gear and the Charts tab. Test: `EntryPointTests.testHomeSleeping`.
 - `home-napping`: `--seed napping --now 2026-06-21T13:50:00+02:00`. The day sky, "Mila is sleeping", "45 m · since 13:05", "Wake up", and "Woke earlier? Set the time". Page `home/nap.html`, without the gear and the Charts tab. Test: `EntryPointTests.testHomeNapping`.
+- `home-sunset`: `--seed evening --now 2026-06-21T22:05:00+02:00`. The sunset sky (value "sunset"), "Mila is awake", "since 15:10 · 12 h 05 m slept today", "Sleep time", and "Add a sleep from earlier". Page `home/sunset.html`, without the gear and the Charts tab. Test: `EntryPointTests.testHomeSunset`.
+- `home-night-awake`: `--seed evening --now 2026-06-21T23:30:00+02:00`. The night sky (value "night"), "Mila is awake", "since 15:10 · 12 h 05 m slept today", "Sleep time", and "Add a sleep from earlier". Page `home/night-awake.html`, without the gear and the Charts tab. Test: `EntryPointTests.testHomeNightAwake`.
+- `home-sunrise`: `--seed winter-morning --now 2026-11-15T08:00:00+01:00`. The sunrise sky (value "sunrise"), "Mila is awake", "since 06:40 · 10 h 52 m slept today", "Sleep time", and "Add a sleep from earlier". Page `home/sunrise.html`, without the gear and the Charts tab. Test: `EntryPointTests.testHomeSunrise`.
 - `add-another-child`: `--seed family`. Taps "+", types "Noah", sets the birthdate wheel to 10 February 2022, and closes the birthdate sheet. Page `child/add-another.html`. Test: `EntryPointTests.testAddAnotherChild`.
 - `edit-child`: `--seed family`. Touches and holds Mila's avatar. Page `child/edit.html`. Test: `EntryPointTests.testEditChild`.
 - `delete-child`: `--seed family`. Opens Edit child for Mila and taps "Delete Mila". Page `child/delete.html`. Test: `EntryPointTests.testDeleteChild`.
@@ -33,7 +36,7 @@ Each one starts the app with `--test-mode`, its seed, and the default test time 
 
 ## Add an entry point
 
-1. In `NapTimeUITests`, add a test that launches the app with `AppDriver.launch(seed:)` (add `--now` or `--location` if the screen needs them), opens the screen, and calls `attachScreenshot(_:to:)` with the entry point name. The seeds are `none`, `family`, `long-name`, `sleeping`, and `napping`, in Core's `Seed`. For a view that a UI test cannot open, render it with `ImageRenderer`, and add its source file to the `NapTimeUITests` sources in `project.yml`.
+1. In `NapTimeUITests`, add a test that launches the app with `AppDriver.launch(seed:)` (and `--now` or `--seed` if the screen needs them), opens the screen, and calls `attachScreenshot(_:to:)` with the entry point name. The seeds are `none`, `family`, `long-name`, `sleeping`, `napping`, `evening`, and `winter-morning`, in Core's `Seed`. For a view that a UI test cannot open, render it with `ImageRenderer`, and add its source file to the `NapTimeUITests` sources in `project.yml`.
 2. Add the entry point to the list above.
 
 ## Run

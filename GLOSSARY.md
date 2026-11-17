@@ -9,7 +9,7 @@ The local Swift package `Packages/Core`, which holds all pure logic and imports 
 _Avoid_: domain module, model layer
 
 **Test mode**:
-The app mode that CI starts with launch arguments: an in-memory store with the data of a named seed, a fixed clock, and a fixed location, with CloudKit and notifications off.
+The app mode that CI starts with launch arguments: an in-memory store with the data of a named seed and a fixed clock, with CloudKit and notifications off.
 _Avoid_: demo mode, mock mode, UI test mode
 
 **Screenshot evidence**:
@@ -95,7 +95,7 @@ _Avoid_: alert, reminder, push
 ### Screens
 
 **Sky**:
-The background of the home screen. It shows day, sunset, night, or sunrise.
+The background of the home screen. It shows day, sunset, night, or sunrise from the sun times of Utrecht, and night while the selected child's night runs.
 _Avoid_: theme, mode, background
 
 **Day sheet**:

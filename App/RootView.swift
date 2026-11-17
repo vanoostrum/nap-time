@@ -78,7 +78,8 @@ struct RootView: View {
             select(child.id)
           })
       } else {
-        // The status line and the totals update every minute. In test mode the clock stays at `--now`.
+        // The status line, the totals, and the sky update every minute, so the sky changes within a minute
+        // of its phase edge (SkyPhase.nextChange). In test mode the clock stays at `--now`.
         TimelineView(.everyMinute) { context in
           let now = fixedNow ?? context.date
           let selected = SelectedChild.id(saved: selectedID, in: store.children)

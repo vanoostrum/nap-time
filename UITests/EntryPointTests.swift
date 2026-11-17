@@ -72,6 +72,43 @@ final class EntryPointTests: XCTestCase {
     driver.attachScreenshot("home-napping", to: self)
   }
 
+  /// `home-sunset`: Mila awake at 22:05 on 21 June, just after sunset. Page `home/sunset.html`.
+  @MainActor
+  func testHomeSunset() throws {
+    try awakeAtHome(
+      "home-sunset", seed: "evening", now: "2026-06-21T22:05:00+02:00",
+      line: "since 15:10 · 12 h 05 m slept today", sky: "sunset")
+  }
+
+  /// `home-night-awake`: Mila awake at 23:30 on 21 June. Page `home/night-awake.html`.
+  @MainActor
+  func testHomeNightAwake() throws {
+    try awakeAtHome(
+      "home-night-awake", seed: "evening", now: "2026-06-21T23:30:00+02:00",
+      line: "since 15:10 · 12 h 05 m slept today", sky: "night")
+  }
+
+  /// `home-sunrise`: Mila awake at 08:00 on 15 November, at sunrise. Page `home/sunrise.html`.
+  @MainActor
+  func testHomeSunrise() throws {
+    try awakeAtHome(
+      "home-sunrise", seed: "winter-morning", now: "2026-11-15T08:00:00+01:00",
+      line: "since 06:40 · 10 h 52 m slept today", sky: "sunrise")
+  }
+
+  /// The home screen with Mila awake, checked and saved as an entry point.
+  @MainActor
+  private func awakeAtHome(_ entryPoint: String, seed: String, now: String, line: String, sky: String) throws {
+    let driver = AppDriver.launch(seed: seed, now: now)
+    driver.waitFor(driver.text("Mila is awake"))
+    XCTAssertEqual(driver.avatars.count, 2)
+    XCTAssertTrue(driver.text(line).exists)
+    XCTAssertTrue(driver.button("Sleep time").exists)
+    XCTAssertTrue(driver.button("Add a sleep from earlier").exists)
+    driver.waitForSky(sky)
+    driver.attachScreenshot(entryPoint, to: self)
+  }
+
   /// `add-another-child`: "Add a child" from "+", filled in for Noah. Page `child/add-another.html`.
   @MainActor
   func testAddAnotherChild() throws {

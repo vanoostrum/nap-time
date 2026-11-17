@@ -97,16 +97,10 @@ public enum ClockTime {
   }
 }
 
-/// The sky behind the home screen. The UI tests read it as the sky's accessibility value.
-public enum Sky: String, Sendable {
-  case day
-  case night
-}
-
 /// What the home screen shows for a child: asleep or awake, the sky, and the status line.
 public struct ChildStatus: Equatable, Sendable {
   public let isSleeping: Bool
-  public let sky: Sky
+  public let sky: SkyPhase
   /// "2 h 14 m · since 19:42" while a sleep runs; else "since 06:55 · 11 h 10 m slept today",
   /// with "since" only when the last sleep ended in the past 24 hours.
   public let line: String
@@ -115,13 +109,13 @@ public struct ChildStatus: Equatable, Sendable {
   public init(sleeps: [Sleep], now: Date, in timeZone: TimeZone) {
     if let running = sleeps.first(where: \.isRunning) {
       isSleeping = true
-      sky = running.kind == .night ? .night : .day
+      sky = SkyPhase(at: now, in: timeZone, running: running.kind)
       let duration = SleepDuration.text(now.timeIntervalSince(running.start))
       line = "\(duration) · since \(ClockTime.text(running.start, in: timeZone))"
       return
     }
     isSleeping = false
-    sky = .day
+    sky = SkyPhase(at: now, in: timeZone)
     let total = "\(SleepDuration.text(SleptToday.total(of: sleeps, now: now, in: timeZone))) slept today"
     if let lastEnd = sleeps.compactMap(\.end).max(), now.timeIntervalSince(lastEnd) < 24 * 3600 {
       line = "since \(ClockTime.text(lastEnd, in: timeZone)) · \(total)"

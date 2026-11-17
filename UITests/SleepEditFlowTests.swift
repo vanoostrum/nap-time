@@ -88,7 +88,8 @@ final class SleepEditFlowTests: XCTestCase {
     driver.waitFor(driver.text("Mila is awake"))
     XCTAssertTrue(driver.text("since 21:56 · 11 h 10 m slept today").exists)
     XCTAssertTrue(driver.button("Sleep time").exists)
-    driver.waitForSky("day")
+    // At 21:56 on 21 June the sunset phase runs (sunset 22:04).
+    driver.waitForSky("sunset")
   }
 
   @MainActor
@@ -101,8 +102,8 @@ final class SleepEditFlowTests: XCTestCase {
     driver.waitFor(driver.text("Mila is sleeping"))
     XCTAssertTrue(driver.text("2 h 14 m · since 19:42").exists)
     XCTAssertTrue(driver.button("Wake up").exists)
-    // The type is now a nap, so the sky shows the day.
-    driver.waitForSky("day")
+    // The type is now a nap, so the sky follows the sun: sunset at 21:56 on 21 June.
+    driver.waitForSky("sunset")
   }
 
   /// A child with no sleeps has nothing to open: the status line does nothing.

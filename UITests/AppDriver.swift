@@ -15,7 +15,7 @@ struct AppDriver {
     return driver
   }
 
-  /// The sky behind the home screen. Its value is "day" or "night".
+  /// The sky behind the home screen. Its value is "day", "sunset", "night", or "sunrise".
   var sky: XCUIElement { app.descendants(matching: .any)["sky"] }
 
   /// Waits until the sky has this value, and fails the test when it does not.
