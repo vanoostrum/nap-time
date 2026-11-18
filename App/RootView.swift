@@ -10,22 +10,10 @@ import UIKit
 struct RootView: View {
   let mode: AppMode
 
-  @State private var phase = Phase.loading
-  /// The child chosen on this phone. `SelectedChild` decides which child the home screen shows.
-  @State private var selectedID: Child.ID?
   @State private var cover: Cover?
-  @State private var tab = AppTab.today
   /// The app is accepting the share of an opened invite.
   @State private var acceptRunning = false
-  /// The app accepted a share, and the partner has not tapped "Start" yet. Held in memory only.
-  @State private var pendingJoin = false
   @State private var inviteAlert: InviteAlert?
-
-  private enum Phase {
-    case loading
-    case failed
-    case ready(FamilyStore)
-  }
 
   private enum Cover: Identifiable {
     case settings
@@ -69,9 +57,10 @@ struct RootView: View {
   }
 
   private var invites: OpenedInvites { .shared }
+  /// The owner of the store, the selected child, the tab, and the pending join, created at launch.
+  private var model: AppModel { .shared }
 
   private static let logger = Logger(subsystem: "nl.clearblocks.naptime", category: "FamilyStore")
-  private static let selectedChildKey = "selectedChildID"
 
   /// The Gregorian calendar in English, with 24-hour times and Monday first, in the time zone of the mode.
   private var calendar: Calendar {
@@ -94,7 +83,11 @@ struct RootView: View {
       .environment(\.locale, Locale(identifier: "en_GB"))
       .environment(\.calendar, calendar)
       .environment(\.timeZone, calendar.timeZone)
-      .task { await loadStore() }
+      .task {
+        // The app loads the store at launch. Handle an invite that was opened before it loaded.
+        _ = await model.loadedStore()
+        handleInvite()
+      }
       .onChange(of: invites.metadata) { handleInvite() }
       .alert(item: $inviteAlert) { alert in
         Alert(title: Text(alert.title), message: Text(alert.message))
@@ -102,42 +95,42 @@ struct RootView: View {
   }
 
   @ViewBuilder private var content: some View {
-    switch phase {
+    switch model.phase {
     case .loading:
       HomeView()
     case .failed:
       HomeView(message: "Nap Time could not open its data.")
     case .ready(let store):
       if let screen = JoinScreen(
-        acceptRunning: acceptRunning, pendingJoin: pendingJoin, sharedChildCount: store.sharedStoreChildren.count)
+        acceptRunning: acceptRunning, pendingJoin: model.pendingJoin, sharedChildCount: store.sharedStoreChildren.count)
       {
         JoinView(
           screen: screen, children: store.sharedStoreChildren, animates: mode == .normal,
           onStart: {
-            pendingJoin = false
-            if let first = store.sharedStoreChildren.first { select(first.id) }
-            tab = .today
+            model.pendingJoin = false
+            if let first = store.sharedStoreChildren.first { model.select(first.id) }
+            model.tab = .today
           })
       } else if store.children.isEmpty {
         ChildFormView(
           kind: .first, today: today, calendar: calendar,
           onSave: { name, birthDate, photo in
             let child = try await store.add(name: name, birthDate: birthDate, photo: photo)
-            select(child.id)
-            tab = .today
+            model.select(child.id)
+            model.tab = .today
           })
       } else {
         // The status line, the totals, and the sky update every minute, so the sky changes within a minute
         // of its phase edge (SkyPhase.nextChange). In test mode the clock stays at `--now`.
         TimelineView(.everyMinute) { context in
           let now = fixedNow ?? context.date
-          let selected = SelectedChild.id(saved: selectedID, in: store.children)
-          if tab == .charts, let child = store.children.first(where: { $0.id == selected }) {
+          let selected = SelectedChild.id(saved: model.selectedID, in: store.children)
+          if model.tab == .charts, let child = store.children.first(where: { $0.id == selected }) {
             ChartsView(
               child: child, sleeps: store.sleeps(of: child.id), now: now, timeZone: calendar.timeZone,
               onAddSleep: { cover = .sleep(.new($0, childID: child.id)) },
               onEditSleep: { cover = .sleep($0.isRunning ? .runningStart($0) : .edit($0)) },
-              onTab: { tab = $0 }
+              onTab: { model.tab = $0 }
             )
             // A new child opens Charts on the opening week again.
             .id(child.id)
@@ -146,14 +139,14 @@ struct RootView: View {
               children: store.children,
               selectedID: selected,
               status: selected.map { ChildStatus(sleeps: store.sleeps(of: $0), now: now, in: calendar.timeZone) },
-              onSelect: select,
+              onSelect: { model.select($0) },
               onAdd: { cover = .addAnother },
               onEdit: { cover = .edit($0) },
               onSleep: { if let selected { startSleep(selected, store: store) } },
               onWake: { if let selected { endSleep(selected, store: store) } },
               onSleepLink: { if let selected { openSleepLink(selected, store: store, now: now) } },
               onStatusLine: selected.flatMap { statusLineAction($0, store: store) },
-              onTab: { tab = $0 },
+              onTab: { model.tab = $0 },
               onSettings: { cover = .settings }
             )
           }
@@ -170,14 +163,14 @@ struct RootView: View {
     case .settings:
       SettingsView(
         store: store, today: today, calendar: calendar,
-        onAdded: { select($0) },
+        onAdded: { model.select($0) },
         onDone: { self.cover = nil })
     case .addAnother:
       ChildFormView(
         kind: .another, today: today, calendar: calendar,
         onSave: { name, birthDate, photo in
           let child = try await store.add(name: name, birthDate: birthDate, photo: photo)
-          select(child.id)
+          model.select(child.id)
           self.cover = nil
         },
         onCancel: { self.cover = nil })
@@ -235,11 +228,12 @@ struct RootView: View {
     return { cover = .sleep(last.isRunning ? .runningStart(last) : .edit(last)) }
   }
 
-  /// "Sleep time": starts a running sleep now, a night or a nap by the time of day.
+  /// "Sleep time": starts a running sleep now, a night or a nap by the time of day, and requests its sleep timer.
   private func startSleep(_ childID: Child.ID, store: FamilyStore) {
     let now = fixedNow ?? Date()
     do {
       try store.startSleep(childID: childID, at: now, kind: SleepKind.guess(start: now, in: calendar.timeZone))
+      model.sleepTimers?.requestTimer(for: childID)
     } catch {
       Self.logger.error("Sleep time failed: \(String(describing: error), privacy: .public)")
     }
@@ -254,18 +248,10 @@ struct RootView: View {
     }
   }
 
-  private func select(_ id: Child.ID) {
-    selectedID = id
-    // Test mode does not read or write user defaults, so every run starts the same.
-    if mode == .normal {
-      UserDefaults.standard.set(id.uuidString, forKey: Self.selectedChildKey)
-    }
-  }
-
   /// Handles an opened invite once the store has loaded: ignores the owner's own link, refuses an invite on a
   /// phone in a family, or joins the family. The pending join is set only after the accept succeeds.
   private func handleInvite() {
-    guard case .ready(let store) = phase, let metadata = invites.metadata else { return }
+    guard case .ready(let store) = model.phase, let metadata = invites.metadata else { return }
     invites.metadata = nil
     switch InviteRule.decision(isOwnLink: metadata.participantRole == .owner, sharing: store.sharing) {
     case .ignore:
@@ -277,35 +263,14 @@ struct RootView: View {
       Task {
         do {
           try await store.acceptShare(metadata)
-          pendingJoin = true
+          model.pendingJoin = true
         } catch {
           Self.logger.error("Joining the family failed: \(String(describing: error), privacy: .public)")
-          pendingJoin = false
+          model.pendingJoin = false
           inviteAlert = .failedJoin
         }
         acceptRunning = false
       }
-    }
-  }
-
-  /// Loads the family store. In test mode the store adds the children and the sleeps of the seed first.
-  /// On failure, it logs the error and keeps the home screen with the sky.
-  private func loadStore() async {
-    do {
-      let groupURL = FileManager.default.containerURL(
-        forSecurityApplicationGroupIdentifier: FamilyStore.appGroupIdentifier)
-      let store = try await FamilyStore.load(
-        mode, appGroupContainerURL: groupURL, seedPhoto: { $0.drawsPhoto ? SeedPhoto.pngData() : nil })
-      if case .test(let environment) = mode {
-        pendingJoin = environment.seed.startsWithPendingJoin
-      } else {
-        selectedID = UserDefaults.standard.string(forKey: Self.selectedChildKey).flatMap(UUID.init(uuidString:))
-      }
-      phase = .ready(store)
-      handleInvite()
-    } catch {
-      Self.logger.error("The family store did not load: \(String(describing: error), privacy: .public)")
-      phase = .failed
     }
   }
 }

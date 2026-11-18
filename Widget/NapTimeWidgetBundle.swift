@@ -1,47 +1,45 @@
 import ActivityKit
+import Core
 import SwiftUI
 import WidgetKit
 
 @main
 struct NapTimeWidgetBundle: WidgetBundle {
   var body: some Widget {
-    NapLiveActivity()
+    SleepTimerLiveActivity()
   }
 }
 
-/// The attributes of the placeholder Live Activity. The v1 plan adds the sleep it tracks.
-struct NapActivityAttributes: ActivityAttributes {
-  struct ContentState: Codable, Hashable {}
-}
-
-struct NapLiveActivity: Widget {
+/// The sleep timer on the Lock Screen and in the Dynamic Island.
+struct SleepTimerLiveActivity: Widget {
   var body: some WidgetConfiguration {
-    ActivityConfiguration(for: NapActivityAttributes.self) { _ in
-      LiveActivityView()
-        .activityBackgroundTint(Color(red: 0.11, green: 0.13, blue: 0.29))
-    } dynamicIsland: { _ in
-      DynamicIsland {
-        DynamicIslandExpandedRegion(.leading) {
-          Image(systemName: "moon.stars.fill")
-            .foregroundStyle(.yellow)
-        }
-        DynamicIslandExpandedRegion(.center) {
-          Text("Nap Time")
-            .font(.headline)
-        }
+    ActivityConfiguration(for: SleepTimerAttributes.self) { context in
+      SleepTimerCard(face(context)) { awake(context) }
+        .activityBackgroundTint(SleepTimerColors(context.state.kind, avatarColorIndex: 0).card)
+        .activitySystemActionForegroundColor(SleepTimerColors(context.state.kind, avatarColorIndex: 0).ink)
+    } dynamicIsland: { context in
+      let face = face(context)
+      return DynamicIsland {
         DynamicIslandExpandedRegion(.bottom) {
-          Text("Asleep since 08:30")
-            .font(.subheadline)
+          SleepTimerExpanded(face) { awake(context) }
         }
       } compactLeading: {
-        Image(systemName: "moon.stars.fill")
-          .foregroundStyle(.yellow)
+        SleepTimerIcon(kind: face.kind)
       } compactTrailing: {
-        Text("08:30")
+        SleepTimerIslandTimer(face: face)
       } minimal: {
-        Image(systemName: "moon.stars.fill")
-          .foregroundStyle(.yellow)
+        SleepTimerIcon(kind: face.kind)
       }
     }
+  }
+
+  private func face(_ context: ActivityViewContext<SleepTimerAttributes>) -> SleepTimerFace {
+    SleepTimerFace(
+      name: context.attributes.childName, avatarColorIndex: context.attributes.avatarColorIndex,
+      start: context.state.start, kind: context.state.kind, timeZone: .current, pauseTime: nil)
+  }
+
+  private func awake(_ context: ActivityViewContext<SleepTimerAttributes>) -> some View {
+    Button("Awake", intent: EndSleepIntent(childID: context.attributes.childID, sleepID: context.state.sleepID))
   }
 }

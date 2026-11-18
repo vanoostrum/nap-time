@@ -1,4 +1,8 @@
+import AppIntents
 import CloudKit
+import Core
+import NapTimeStore
+import OSLog
 import Observation
 import UIKit
 
@@ -35,4 +39,81 @@ final class OpenedInvites {
   static let shared = OpenedInvites()
 
   var metadata: CKShare.Metadata?
+}
+
+/// The one owner of the family store, created at launch outside a view, so a background launch has the store too.
+///
+/// It loads the store, holds the selected child and the tab, creates the sleep timer controller, and registers the
+/// store for `EndSleepIntent`. `RootView` reads it.
+@MainActor @Observable
+final class AppModel {
+  static let shared = AppModel()
+
+  enum Phase {
+    case loading
+    case failed
+    case ready(FamilyStore)
+  }
+
+  private(set) var phase = Phase.loading
+  /// The child chosen on this phone. `SelectedChild` decides which child the home screen shows.
+  private(set) var selectedID: Child.ID?
+  var tab = AppTab.today
+  /// The app accepted a share, and the partner has not tapped "Start" yet. Held in memory only.
+  var pendingJoin = false
+  private(set) var mode = AppMode.normal
+
+  @ObservationIgnored private var load: Task<FamilyStore?, Never>?
+  @ObservationIgnored private(set) var sleepTimers: SleepTimerController?
+
+  private static let logger = Logger(subsystem: "nl.clearblocks.naptime", category: "FamilyStore")
+  private static let selectedChildKey = "selectedChildID"
+
+  /// Starts the load of the family store once, at launch.
+  func launch(_ mode: AppMode) {
+    guard load == nil else { return }
+    self.mode = mode
+    AppDependencyManager.shared.add(dependency: FamilyStoreAccess { await AppModel.shared.loadedStore() })
+    load = Task { await loadStore() }
+  }
+
+  /// The family store once it has loaded, or `nil` when it did not load.
+  func loadedStore() async -> FamilyStore? {
+    await load?.value
+  }
+
+  func select(_ id: Child.ID) {
+    selectedID = id
+    // Test mode does not read or write user defaults, so every run starts the same.
+    if mode == .normal {
+      UserDefaults.standard.set(id.uuidString, forKey: Self.selectedChildKey)
+    }
+  }
+
+  /// Loads the family store. In test mode the store adds the children and the sleeps of the seed first.
+  /// On failure, it logs the error and keeps the home screen with the sky.
+  private func loadStore() async -> FamilyStore? {
+    do {
+      let groupURL = FileManager.default.containerURL(
+        forSecurityApplicationGroupIdentifier: FamilyStore.appGroupIdentifier)
+      let store = try await FamilyStore.load(
+        mode, appGroupContainerURL: groupURL, seedPhoto: { $0.drawsPhoto ? SeedPhoto.pngData() : nil })
+      if case .test(let environment) = mode {
+        pendingJoin = environment.seed.startsWithPendingJoin
+      } else {
+        selectedID = UserDefaults.standard.string(forKey: Self.selectedChildKey).flatMap(UUID.init(uuidString:))
+      }
+      let timers = SleepTimerController(store: store, mode: mode)
+      sleepTimers = timers
+      // One closure for every save: it reconciles the sleep timers. CRAFT-52 adds the nudge plan here.
+      store.onSave = { [weak timers] in timers?.reconcile() }
+      timers.start()
+      phase = .ready(store)
+      return store
+    } catch {
+      Self.logger.error("The family store did not load: \(String(describing: error), privacy: .public)")
+      phase = .failed
+      return nil
+    }
+  }
 }
