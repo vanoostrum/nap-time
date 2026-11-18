@@ -1,3 +1,4 @@
+import CloudKit
 import Core
 import NapTimeStore
 import OSLog
@@ -14,6 +15,11 @@ struct RootView: View {
   @State private var selectedID: Child.ID?
   @State private var cover: Cover?
   @State private var tab = AppTab.today
+  /// The app is accepting the share of an opened invite.
+  @State private var acceptRunning = false
+  /// The app accepted a share, and the partner has not tapped "Start" yet. Held in memory only.
+  @State private var pendingJoin = false
+  @State private var inviteAlert: InviteAlert?
 
   private enum Phase {
     case loading
@@ -22,12 +28,14 @@ struct RootView: View {
   }
 
   private enum Cover: Identifiable {
+    case settings
     case addAnother
     case edit(Child.ID)
     case sleep(SleepFormMode)
 
     var id: String {
       switch self {
+      case .settings: "settings"
       case .addAnother: "add-another"
       case .edit(let id): id.uuidString
       case .sleep(.new(_, let childID)): "new-sleep-\(childID.uuidString)"
@@ -37,6 +45,30 @@ struct RootView: View {
       }
     }
   }
+
+  /// The alerts of an opened invite.
+  private enum InviteAlert: Identifiable {
+    case refused
+    case failedJoin
+
+    var id: Self { self }
+
+    var title: String {
+      switch self {
+      case .refused: InviteRule.refusalTitle
+      case .failedJoin: InviteRule.failedJoinTitle
+      }
+    }
+
+    var message: String {
+      switch self {
+      case .refused: InviteRule.refusalText
+      case .failedJoin: InviteRule.failedJoinText
+      }
+    }
+  }
+
+  private var invites: OpenedInvites { .shared }
 
   private static let logger = Logger(subsystem: "nl.clearblocks.naptime", category: "FamilyStore")
   private static let selectedChildKey = "selectedChildID"
@@ -63,6 +95,10 @@ struct RootView: View {
       .environment(\.calendar, calendar)
       .environment(\.timeZone, calendar.timeZone)
       .task { await loadStore() }
+      .onChange(of: invites.metadata) { handleInvite() }
+      .alert(item: $inviteAlert) { alert in
+        Alert(title: Text(alert.title), message: Text(alert.message))
+      }
   }
 
   @ViewBuilder private var content: some View {
@@ -72,7 +108,17 @@ struct RootView: View {
     case .failed:
       HomeView(message: "Nap Time could not open its data.")
     case .ready(let store):
-      if store.children.isEmpty {
+      if let screen = JoinScreen(
+        acceptRunning: acceptRunning, pendingJoin: pendingJoin, sharedChildCount: store.sharedStoreChildren.count)
+      {
+        JoinView(
+          screen: screen, children: store.sharedStoreChildren, animates: mode == .normal,
+          onStart: {
+            pendingJoin = false
+            if let first = store.sharedStoreChildren.first { select(first.id) }
+            tab = .today
+          })
+      } else if store.children.isEmpty {
         ChildFormView(
           kind: .first, today: today, calendar: calendar,
           onSave: { name, birthDate, photo in
@@ -107,7 +153,8 @@ struct RootView: View {
               onWake: { if let selected { endSleep(selected, store: store) } },
               onSleepLink: { if let selected { openSleepLink(selected, store: store, now: now) } },
               onStatusLine: selected.flatMap { statusLineAction($0, store: store) },
-              onTab: { tab = $0 }
+              onTab: { tab = $0 },
+              onSettings: { cover = .settings }
             )
           }
         }
@@ -120,6 +167,11 @@ struct RootView: View {
 
   @ViewBuilder private func coverView(_ cover: Cover, store: FamilyStore) -> some View {
     switch cover {
+    case .settings:
+      SettingsView(
+        store: store, today: today, calendar: calendar,
+        onAdded: { select($0) },
+        onDone: { self.cover = nil })
     case .addAnother:
       ChildFormView(
         kind: .another, today: today, calendar: calendar,
@@ -133,6 +185,7 @@ struct RootView: View {
       if let index = store.children.firstIndex(where: { $0.id == id }) {
         ChildFormView(
           kind: .edit(store.children[index], index: index), today: today, calendar: calendar,
+          onlyOnThisPhone: store.onlyOnThisPhone.contains(id),
           onSave: { name, birthDate, photo in
             try await store.update(id, name: name, birthDate: birthDate, newPhoto: photo)
             self.cover = nil
@@ -151,6 +204,7 @@ struct RootView: View {
       if let child = store.children.first(where: { $0.id == mode.childID }) {
         SleepFormView(
           mode: mode, child: child, sleeps: store.sleeps(of: child.id), now: fixedNow ?? Date(), calendar: calendar,
+          onlyOnThisPhone: store.onlyOnThisPhone.contains(child.id),
           onSave: { sleep in
             try store.saveSleep(sleep)
             self.cover = nil
@@ -208,6 +262,32 @@ struct RootView: View {
     }
   }
 
+  /// Handles an opened invite once the store has loaded: ignores the owner's own link, refuses an invite on a
+  /// phone in a family, or joins the family. The pending join is set only after the accept succeeds.
+  private func handleInvite() {
+    guard case .ready(let store) = phase, let metadata = invites.metadata else { return }
+    invites.metadata = nil
+    switch InviteRule.decision(isOwnLink: metadata.participantRole == .owner, sharing: store.sharing) {
+    case .ignore:
+      return
+    case .refuse:
+      inviteAlert = .refused
+    case .accept:
+      acceptRunning = true
+      Task {
+        do {
+          try await store.acceptShare(metadata)
+          pendingJoin = true
+        } catch {
+          Self.logger.error("Joining the family failed: \(String(describing: error), privacy: .public)")
+          pendingJoin = false
+          inviteAlert = .failedJoin
+        }
+        acceptRunning = false
+      }
+    }
+  }
+
   /// Loads the family store. In test mode the store adds the children and the sleeps of the seed first.
   /// On failure, it logs the error and keeps the home screen with the sky.
   private func loadStore() async {
@@ -216,10 +296,13 @@ struct RootView: View {
         forSecurityApplicationGroupIdentifier: FamilyStore.appGroupIdentifier)
       let store = try await FamilyStore.load(
         mode, appGroupContainerURL: groupURL, seedPhoto: { $0.drawsPhoto ? SeedPhoto.pngData() : nil })
-      if mode == .normal {
+      if case .test(let environment) = mode {
+        pendingJoin = environment.seed.startsWithPendingJoin
+      } else {
         selectedID = UserDefaults.standard.string(forKey: Self.selectedChildKey).flatMap(UUID.init(uuidString:))
       }
       phase = .ready(store)
+      handleInvite()
     } catch {
       Self.logger.error("The family store did not load: \(String(describing: error), privacy: .public)")
       phase = .failed

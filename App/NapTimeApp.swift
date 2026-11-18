@@ -3,6 +3,8 @@ import SwiftUI
 
 @main
 struct NapTimeApp: App {
+  /// Gives the scenes the scene delegate that receives opened invites.
+  @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
   private let mode: AppMode
 
   init() {

@@ -177,7 +177,7 @@ public final class FamilyStore {
       let sharedStore = coordinator.persistentStore(for: sharedURL)
     else { throw FamilyStoreError.storeNotLoaded }
     container.viewContext.automaticallyMergesChangesFromParent = true
-    container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+    container.viewContext.mergePolicy = NSMergePolicy.mergeByPropertyObjectTrump
 
     let seam: any ShareMoving =
       shareMoving
@@ -346,10 +346,10 @@ public final class FamilyStore {
     await processStoreChange()
   }
 
-  /// After the iCloud sharing sheet stopped sharing. On a phone that joined a family, the partner left it: the family's
-  /// children and sleeps leave this phone. On the owner's phone, the children stay.
-  public func didStopSharing(_ share: CKShare) async {
-    if sharing.isJoined {
+  /// After the iCloud sharing sheet stopped sharing. On a phone that joined a family, the partner left it: the
+  /// family's children and sleeps leave this phone. On the owner's phone, the children stay.
+  public func didStopSharing() async {
+    if sharing.isJoined, let share = try? container.fetchShares(in: sharedStore).first {
       do {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
           container.purgeObjectsAndRecordsInZone(with: share.recordID.zoneID, in: sharedStore) { _, error in
