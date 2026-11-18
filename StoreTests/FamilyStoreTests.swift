@@ -448,7 +448,8 @@ import UniformTypeIdentifiers
 
     try store.startSleep(childID: mila.id, at: date("2026-06-21T09:00:00+02:00"), kind: .nap)
     #expect(calls == 1, "the placement save")
-    let sleep = try #require(store.sleeps(of: mila.id).first(where: \.isRunning))
+    let running = store.sleeps(of: mila.id).first { $0.isRunning }
+    let sleep = try #require(running)
 
     await store.processStoreChange()
 
