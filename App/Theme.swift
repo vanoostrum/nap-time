@@ -41,6 +41,8 @@ enum Theme {
   static let tooLittleShadow = Color(hex: 0x8A2A1B)
   static let handle = Color(hex: 0xC9D6E4)
   static let handleShadow = Color(hex: 0xA9B8C9)
+  /// The text of the "Only on this phone" tag in Settings.
+  static let tagInk = Color(hex: 0x5A6F88)
   static let scrim = Color(red: 10 / 255, green: 25 / 255, blue: 50 / 255).opacity(0.45)
 
   /// The colour of a child's avatar: the colours alternate in the order of the children.

@@ -24,16 +24,40 @@ public enum Seed: String, CaseIterable, Sendable {
   /// `week`, with Mila's sleeps from the sleep day Monday 9 November to the morning of Wednesday 11 November
   /// (`charts/week-today.html`). Pass `--now 2026-11-11T10:00:00+01:00`.
   case weekToday = "week-today"
+  /// `family`, shared with the partner "Sam".
+  case shared
+  /// `family`, with an invite sent that the partner has not opened yet.
+  case invited
+  /// This phone joined Alex's family: Mila and Noah are family children, and Lou, born 3 May 2024 and added
+  /// before joining, is only on this phone.
+  case partner
+  /// `family`, with no iCloud account.
+  case noICloud = "no-icloud"
+  /// This phone just joined Alex's family, and no shared child has arrived yet: "Joining the family…".
+  case joining
+  /// This phone just joined Alex's family, and Mila and Noah arrived: "You joined the family".
+  case joined
+  /// `family`, and two running nights for Mila from 21 June 2026 19:42 and 19:44, as two phones log them before
+  /// they sync. Pass `--now 2026-06-22T07:30:00+02:00`.
+  case duplicateRunning = "duplicate-running"
+  /// `family`, and two overlapping nights for Mila, one from 21 June 2026 19:42 to 22 June 06:50 and one running
+  /// from 19:44, and two overlapping sleeps for Noah, a night from 20 June 19:00 to 21 June 08:00 and a nap from
+  /// 21 June 07:00 to 20:30. Pass `--now 2026-06-22T07:30:00+02:00`.
+  case overlapping
 
   /// The children, in the order that test mode adds them.
   public var children: [SeedChild] {
     switch self {
-    case .none:
+    case .none, .joining:
       []
-    case .family, .sleeping, .napping, .evening, .winterMorning, .week, .weekToday:
+    case .family, .sleeping, .napping, .evening, .winterMorning, .week, .weekToday, .shared, .invited, .noICloud,
+      .joined, .duplicateRunning, .overlapping:
+      [Self.mila, Self.noah]
+    case .partner:
       [
-        SeedChild(name: "Mila", birthDate: BirthDate(year: 2025, month: 3, day: 12)!, drawsPhoto: false),
-        SeedChild(name: "Noah", birthDate: BirthDate(year: 2022, month: 2, day: 10)!, drawsPhoto: true),
+        SeedChild(
+          name: "Lou", birthDate: BirthDate(year: 2024, month: 5, day: 3)!, drawsPhoto: false, onlyOnThisPhone: true),
+        Self.mila, Self.noah,
       ]
     case .longName:
       [
@@ -50,10 +74,33 @@ public enum Seed: String, CaseIterable, Sendable {
       childIndex: 0, start: Self.instant("2026-06-20T19:45:00+02:00"), end: Self.instant("2026-06-21T06:55:00+02:00"),
       kind: .night)
     switch self {
-    case .none, .longName:
+    case .none, .longName, .joining:
       return []
-    case .family:
+    case .family, .shared, .invited, .noICloud, .joined:
       return [lastNight]
+    case .partner:
+      return [
+        SeedSleep(childIndex: 1, start: lastNight.start, end: lastNight.end, kind: lastNight.kind)
+      ]
+    case .duplicateRunning:
+      return [
+        lastNight, SeedSleep(childIndex: 0, start: Self.instant("2026-06-21T19:42:00+02:00"), end: nil, kind: .night),
+        SeedSleep(childIndex: 0, start: Self.instant("2026-06-21T19:44:00+02:00"), end: nil, kind: .night),
+      ]
+    case .overlapping:
+      return [
+        lastNight,
+        SeedSleep(
+          childIndex: 0, start: Self.instant("2026-06-21T19:42:00+02:00"),
+          end: Self.instant("2026-06-22T06:50:00+02:00"), kind: .night),
+        SeedSleep(childIndex: 0, start: Self.instant("2026-06-21T19:44:00+02:00"), end: nil, kind: .night),
+        SeedSleep(
+          childIndex: 1, start: Self.instant("2026-06-20T19:00:00+02:00"),
+          end: Self.instant("2026-06-21T08:00:00+02:00"), kind: .night),
+        SeedSleep(
+          childIndex: 1, start: Self.instant("2026-06-21T07:00:00+02:00"),
+          end: Self.instant("2026-06-21T20:30:00+02:00"), kind: .nap),
+      ]
     case .sleeping:
       return [
         lastNight, SeedSleep(childIndex: 0, start: Self.instant("2026-06-21T19:42:00+02:00"), end: nil, kind: .night),
@@ -79,6 +126,25 @@ public enum Seed: String, CaseIterable, Sendable {
       return Seed.week.sleeps + Self.milasWeekSoFar
     }
   }
+
+  private static let mila = SeedChild(
+    name: "Mila", birthDate: BirthDate(year: 2025, month: 3, day: 12)!, drawsPhoto: false)
+  private static let noah = SeedChild(
+    name: "Noah", birthDate: BirthDate(year: 2022, month: 2, day: 10)!, drawsPhoto: true)
+
+  /// How the phone shares the family.
+  public var sharing: FamilySharing {
+    switch self {
+    case .shared: .shared(partner: "Sam")
+    case .invited: .invited
+    case .partner, .joining, .joined: .joined(owner: "Alex")
+    case .noICloud: .noICloud
+    default: .notShared
+    }
+  }
+
+  /// The app starts on a join screen: it has accepted a share, and the partner has not tapped "Start" yet.
+  public var startsWithPendingJoin: Bool { self == .joining || self == .joined }
 
   /// Mila's sleeps in the sleep days from Monday 2 to Sunday 8 November 2026, as `charts/week.html` shows.
   private static let milasWeek = [
@@ -110,8 +176,8 @@ public enum Seed: String, CaseIterable, Sendable {
     ISO8601DateFormatter().date(from: iso)!
   }
 
-  /// The index in `children` of the selected child.
-  public var selectedIndex: Int? { children.isEmpty ? nil : 0 }
+  /// The index in `children` of the selected child: the first family child.
+  public var selectedIndex: Int? { children.firstIndex { !$0.onlyOnThisPhone } }
 }
 
 /// A child of a seed. The data is made up.
@@ -120,6 +186,15 @@ public struct SeedChild: Equatable, Sendable {
   public let birthDate: BirthDate
   /// The app draws a photo for this child, so a screenshot shows a photo. It is not a real photo.
   public let drawsPhoto: Bool
+  /// The child is not in the family: on a phone that joined a family, it stays in the private store.
+  public let onlyOnThisPhone: Bool
+
+  public init(name: String, birthDate: BirthDate, drawsPhoto: Bool, onlyOnThisPhone: Bool = false) {
+    self.name = name
+    self.birthDate = birthDate
+    self.drawsPhoto = drawsPhoto
+    self.onlyOnThisPhone = onlyOnThisPhone
+  }
 }
 
 /// A sleep of a seed. The data is made up.

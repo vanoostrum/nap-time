@@ -129,6 +129,12 @@ public struct Age: Equatable, Sendable {
 
   /// "Mila is 3 days old": days under 1 week, weeks under 1 month, months under 1 year, then years.
   public func sentence(name: String) -> String {
+    "\(name) is \(text) old"
+  }
+
+  /// "3 days", "1 week", "5 months", or "1 year": days under 1 week, weeks under 1 month,
+  /// months under 1 year, then years.
+  public var text: String {
     let count: Int
     let unit: String
     if days < 7 {
@@ -140,7 +146,7 @@ public struct Age: Equatable, Sendable {
     } else {
       (count, unit) = (years, "year")
     }
-    return "\(name) is \(count) \(unit)\(count == 1 ? "" : "s") old"
+    return "\(count) \(unit)\(count == 1 ? "" : "s")"
   }
 }
 

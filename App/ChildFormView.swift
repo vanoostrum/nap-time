@@ -18,6 +18,8 @@ struct ChildFormView: View {
   let kind: ChildFormKind
   let today: BirthDate
   let calendar: Calendar
+  /// The child is only on this phone, so a delete reaches only this phone.
+  var onlyOnThisPhone = false
   /// Saves the trimmed name, the birthdate, and the picked image data (`nil` when no photo was picked).
   let onSave: (String, BirthDate, Data?) async throws -> Void
   var onCancel: () -> Void = {}
@@ -36,13 +38,14 @@ struct ChildFormView: View {
   @FocusState private var nameIsFocused: Bool
 
   init(
-    kind: ChildFormKind, today: BirthDate, calendar: Calendar,
+    kind: ChildFormKind, today: BirthDate, calendar: Calendar, onlyOnThisPhone: Bool = false,
     onSave: @escaping (String, BirthDate, Data?) async throws -> Void,
     onCancel: @escaping () -> Void = {}, onDelete: @escaping () -> Void = {}
   ) {
     self.kind = kind
     self.today = today
     self.calendar = calendar
+    self.onlyOnThisPhone = onlyOnThisPhone
     self.onSave = onSave
     self.onCancel = onCancel
     self.onDelete = onDelete
@@ -283,7 +286,7 @@ struct ChildFormView: View {
         Text("Delete \(child.name)?")
           .font(.baloo(26, .extraBold))
           .accessibilityAddTraits(.isHeader)
-        Text("This deletes \(child.name) and all of \(child.name)'s sleeps, on both phones. You cannot undo this.")
+        Text(DeleteText.child(name: child.name, onlyOnThisPhone: onlyOnThisPhone))
           .font(.baloo(17))
         Button("Delete \(child.name)", action: onDelete)
           .buttonStyle(PrimaryButtonStyle(destructive: true))

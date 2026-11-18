@@ -10,34 +10,42 @@ import UniformTypeIdentifiers
 @Suite struct FamilyStoreTests {
   private let testMode = AppMode.test(.standard)
 
-  @Test @MainActor func testModeStoreLoadsInMemoryWithoutCloudKit() async throws {
-    let description = try FamilyStore.storeDescription(for: testMode, appGroupContainerURL: nil)
-    #expect(description.cloudKitContainerOptions == nil)
+  @Test @MainActor func testModeStoreLoadsTwoInMemoryStoresWithoutCloudKit() async throws {
+    let descriptions = try FamilyStore.storeDescriptions(for: testMode, appGroupContainerURL: nil)
+    #expect(descriptions.count == 2)
+    #expect(descriptions.allSatisfy { $0.cloudKitContainerOptions == nil })
 
-    let store = try await FamilyStore.load(description)
+    let store = try await FamilyStore.load(testMode)
 
     let stores = store.container.persistentStoreCoordinator.persistentStores
-    #expect(stores.count == 1)
-    #expect(stores.first?.type == NSInMemoryStoreType)
-    #expect(store.container.persistentStoreDescriptions.first?.cloudKitContainerOptions == nil)
+    #expect(stores.count == 2)
+    #expect(stores.allSatisfy { $0.type == NSInMemoryStoreType })
+    #expect(store.container.persistentStoreDescriptions.allSatisfy { $0.cloudKitContainerOptions == nil })
     #expect(store.children.isEmpty)
+    #expect(store.sharing == .notShared)
   }
 
-  @Test func normalModePutsTheStoreUnderTheAppGroupContainer() throws {
+  @Test func normalModeHasAPrivateAndASharedStoreUnderTheAppGroupContainer() throws {
     let groupURL = URL(filePath: "/tmp/group.nl.clearblocks.naptime-test", directoryHint: .isDirectory)
 
-    let description = try FamilyStore.storeDescription(for: .normal, appGroupContainerURL: groupURL)
+    let descriptions = try FamilyStore.storeDescriptions(for: .normal, appGroupContainerURL: groupURL)
 
-    let storeURL = try #require(description.url)
-    #expect(storeURL.standardizedFileURL.path().hasPrefix(groupURL.standardizedFileURL.path()))
-    #expect(storeURL.lastPathComponent == "NapTime.sqlite")
-    #expect(description.type == NSSQLiteStoreType)
-    #expect(description.cloudKitContainerOptions?.containerIdentifier == "iCloud.nl.clearblocks.naptime")
+    #expect(descriptions.count == 2)
+    #expect(descriptions.map { $0.url?.lastPathComponent } == ["NapTime.sqlite", "NapTime-shared.sqlite"])
+    #expect(descriptions.map { $0.cloudKitContainerOptions?.databaseScope } == [.private, .shared])
+    for description in descriptions {
+      let storeURL = try #require(description.url)
+      #expect(storeURL.standardizedFileURL.path().hasPrefix(groupURL.standardizedFileURL.path()))
+      #expect(description.type == NSSQLiteStoreType)
+      #expect(description.cloudKitContainerOptions?.containerIdentifier == "iCloud.nl.clearblocks.naptime")
+      #expect(description.options[NSPersistentHistoryTrackingKey] as? NSNumber == true)
+      #expect(description.options[NSPersistentStoreRemoteChangeNotificationPostOptionKey] as? NSNumber == true)
+    }
   }
 
   @Test func normalModeWithoutAppGroupContainerNamesTheGroup() {
     #expect(throws: FamilyStoreError.noAppGroupContainer(groupIdentifier: "group.nl.clearblocks.naptime")) {
-      try FamilyStore.storeDescription(for: .normal, appGroupContainerURL: nil)
+      try FamilyStore.storeDescriptions(for: .normal, appGroupContainerURL: nil)
     }
     let error = FamilyStoreError.noAppGroupContainer(groupIdentifier: FamilyStore.appGroupIdentifier)
     #expect(error.description.contains("group.nl.clearblocks.naptime"))
@@ -370,9 +378,8 @@ import UniformTypeIdentifiers
   }
 
   @MainActor private func inMemoryStore(now: Date? = nil) async throws -> FamilyStore {
-    let description = try FamilyStore.storeDescription(for: testMode, appGroupContainerURL: nil)
-    guard let now else { return try await FamilyStore.load(description) }
-    return try await FamilyStore.load(description, now: { now })
+    let standard = TestEnvironment.standard
+    return try await FamilyStore.load(.test(TestEnvironment(now: now ?? standard.now, timeZone: standard.timeZone)))
   }
 
   private func day(_ year: Int, _ month: Int, _ day: Int) -> BirthDate {

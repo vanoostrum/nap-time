@@ -51,6 +51,60 @@ import Testing
         ])
   }
 
+  @Test func theSharingSeedsAreTheFamily() {
+    for seed in [Seed.shared, .invited, .noICloud, .joined] {
+      #expect(seed.children == Seed.family.children)
+      #expect(seed.sleeps == Seed.family.sleeps)
+      #expect(seed.selectedIndex == 0)
+    }
+    #expect(Seed.family.children.allSatisfy { !$0.onlyOnThisPhone })
+  }
+
+  @Test func partnerHasLouOnlyOnThisPhoneAddedFirst() {
+    let children = Seed.partner.children
+    #expect(children.map(\.name) == ["Lou", "Mila", "Noah"])
+    #expect(children.map(\.onlyOnThisPhone) == [true, false, false])
+    #expect(children[0].birthDate == BirthDate(year: 2024, month: 5, day: 3)!)
+    #expect(Array(children.dropFirst()) == Seed.family.children)
+    #expect(Seed.partner.selectedIndex == 1)
+    #expect(
+      Seed.partner.sleeps == [
+        SeedSleep(
+          childIndex: 1, start: date("2026-06-20T19:45:00+02:00"), end: date("2026-06-21T06:55:00+02:00"), kind: .night)
+      ])
+  }
+
+  @Test func joiningHasNoChildren() {
+    #expect(Seed.joining.children.isEmpty)
+    #expect(Seed.joining.sleeps.isEmpty)
+  }
+
+  @Test func duplicateRunningHasTwoRunningNightsForMila() {
+    #expect(Seed.duplicateRunning.children == Seed.family.children)
+    #expect(
+      Seed.duplicateRunning.sleeps
+        == Seed.family.sleeps + [
+          SeedSleep(childIndex: 0, start: date("2026-06-21T19:42:00+02:00"), end: nil, kind: .night),
+          SeedSleep(childIndex: 0, start: date("2026-06-21T19:44:00+02:00"), end: nil, kind: .night),
+        ])
+  }
+
+  @Test func overlappingMergesIntoTheSleepsOfTheSpec() {
+    let mila = UUID()
+    let noah = UUID()
+    let sleeps = Seed.overlapping.sleeps.map { seed in
+      Sleep(id: UUID(), childID: seed.childIndex == 0 ? mila : noah, start: seed.start, end: seed.end, kind: seed.kind)
+    }
+    let merges = SleepMerge.merges(of: sleeps)
+    #expect(merges.count == 2)
+    let noahs = merges.first { $0.kept.childID == noah }
+    #expect(noahs?.kept.start == date("2026-06-20T19:00:00+02:00"))
+    #expect(noahs?.kept.end == date("2026-06-21T20:30:00+02:00"))
+    let milas = merges.first { $0.kept.childID == mila }
+    #expect(milas?.kept.start == date("2026-06-21T19:42:00+02:00"))
+    #expect(milas?.kept.end == date("2026-06-22T06:50:00+02:00"))
+  }
+
   @Test func winterMorningHasOnlyMilasNovemberNight() {
     #expect(Seed.winterMorning.children == Seed.family.children)
     #expect(Seed.winterMorning.selectedIndex == 0)
