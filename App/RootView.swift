@@ -200,6 +200,7 @@ struct RootView: View {
           onlyOnThisPhone: store.onlyOnThisPhone.contains(child.id),
           onSave: { sleep in
             try store.saveSleep(sleep)
+            model.nudges?.requestPermission()
             self.cover = nil
           },
           onCancel: { self.cover = nil },
@@ -229,11 +230,13 @@ struct RootView: View {
   }
 
   /// "Sleep time": starts a running sleep now, a night or a nap by the time of day, and requests its sleep timer.
+  /// The first time, it also shows the iPhone's notification prompt for the nudges.
   private func startSleep(_ childID: Child.ID, store: FamilyStore) {
     let now = fixedNow ?? Date()
     do {
       try store.startSleep(childID: childID, at: now, kind: SleepKind.guess(start: now, in: calendar.timeZone))
       model.sleepTimers?.requestTimer(for: childID)
+      model.nudges?.requestPermission()
     } catch {
       Self.logger.error("Sleep time failed: \(String(describing: error), privacy: .public)")
     }

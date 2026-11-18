@@ -93,7 +93,7 @@ The card on the charts screen with one tip from the child's shown week, a few ge
 _Avoid_: advice, insight, recommendation
 
 **Nudge**:
-A notification that reminds a parent to log: no sleep by the usual bedtime plus one hour, or a sleep that runs longer than 14 hours.
+A notification that asks a parent to check one child's log: no sleep logged by the usual bedtime plus one hour, or a sleep that has run for 14 hours. Each phone plans its own nudges.
 _Avoid_: alert, reminder, push
 
 ### Screens
