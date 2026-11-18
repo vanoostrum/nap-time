@@ -130,6 +130,7 @@ struct SettingsView: View {
 
   private func childRow(_ child: Child, index: Int) -> some View {
     let only = store.onlyOnThisPhone.contains(child.id)
+    let rowText = ChildRow.text(birthDate: child.birthDate, today: today)
     return Button {
       cover = .edit(child.id)
     } label: {
@@ -139,7 +140,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 0) {
           Text(child.name)
             .balooLine(16, lineHeight: 18)
-          Text(ChildRow.text(birthDate: child.birthDate, today: today))
+          Text(rowText)
             .balooLine(15, lineHeight: 17)
           if only {
             Text("Only on this phone")
@@ -161,8 +162,8 @@ struct SettingsView: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .accessibilityElement(children: .combine)
     .accessibilityLabel(child.name)
+    .accessibilityValue(only ? "\(rowText), Only on this phone" : rowText)
     .accessibilityIdentifier("child-row")
   }
 

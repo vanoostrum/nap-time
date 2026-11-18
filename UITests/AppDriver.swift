@@ -179,6 +179,41 @@ struct AppDriver {
     app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
   }
 
+  /// Taps the gear on the home screen and waits for Settings.
+  func openSettings() {
+    let gear = button("Settings")
+    waitFor(gear)
+    gear.tap()
+    waitFor(app.descendants(matching: .any)["settings"])
+  }
+
+  /// The child rows in Settings, by name, top first.
+  var childRows: [String] {
+    let rows = app.descendants(matching: .any).matching(identifier: "child-row")
+    return (0..<rows.count).map { rows.element(boundBy: $0).label }
+  }
+
+  /// The second line of each child row in Settings, top first, such as "1 year · 11–14 h", with
+  /// ", Only on this phone" for a child only on this phone.
+  var childRowValues: [String] {
+    let rows = app.descendants(matching: .any).matching(identifier: "child-row")
+    return (0..<rows.count).map { (rows.element(boundBy: $0).value as? String) ?? "" }
+  }
+
+  /// Taps a child's row in Settings and waits for Edit child.
+  func openChildRow(_ name: String) {
+    let row = app.descendants(matching: .any).matching(identifier: "child-row")
+      .matching(NSPredicate(format: "label == %@", name)).firstMatch
+    waitFor(row)
+    row.tap()
+    waitFor(text("Edit child"))
+  }
+
+  /// Waits for an alert with this title, and fails the test when it does not show.
+  func waitForAlert(_ title: String, file: StaticString = #filePath, line: UInt = #line) {
+    waitFor(app.alerts[title], file: file, line: line)
+  }
+
   func attachScreenshot(_ entryPoint: String, to testCase: XCTestCase) {
     let attachment = XCTAttachment(
       data: app.screenshot().pngRepresentation, uniformTypeIdentifier: "public.png")
