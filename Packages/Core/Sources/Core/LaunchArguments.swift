@@ -21,7 +21,7 @@ public struct LaunchArgumentError: Error, Equatable, CustomStringConvertible {
 ///
 /// - `--test-mode` starts test mode.
 /// - `--now <ISO 8601 date with a UTC offset>` replaces the fixed clock in test mode.
-/// - `--seed <none|family|long-name|sleeping|napping|evening|winter-morning|week|week-today>` picks the data that test mode starts with. The default is `none`.
+/// - `--seed <name>` picks the data that test mode starts with. The names are the raw values of `Seed`. The default is `none`.
 ///
 /// Without `--test-mode`, `--now` and `--seed` are ignored and not checked. Unknown arguments are ignored.
 public enum LaunchArguments {

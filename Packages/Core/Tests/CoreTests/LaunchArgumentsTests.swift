@@ -109,6 +109,31 @@ import Testing
     #expect(Seed.family.selectedIndex == 0)
   }
 
+  @Test func theSharingSeedsParseWithTheirStateAndPendingJoin() throws {
+    let expected: [(String, Seed, FamilySharing, Bool)] = [
+      ("shared", .shared, .shared(partner: "Sam"), false),
+      ("invited", .invited, .invited, false),
+      ("partner", .partner, .joined(owner: "Alex"), false),
+      ("no-icloud", .noICloud, .noICloud, false),
+      ("joining", .joining, .joined(owner: "Alex"), true),
+      ("joined", .joined, .joined(owner: "Alex"), true),
+      ("duplicate-running", .duplicateRunning, .notShared, false),
+      ("overlapping", .overlapping, .notShared, false),
+    ]
+    for (name, seed, sharing, pendingJoin) in expected {
+      let mode = try LaunchArguments.parse([executable, "--test-mode", "--seed", name])
+      guard case .test(let environment) = mode else {
+        Issue.record("Expected test mode, got \(mode)")
+        return
+      }
+      #expect(environment.seed == seed)
+      #expect(seed.sharing == sharing)
+      #expect(seed.startsWithPendingJoin == pendingJoin)
+    }
+    #expect(Seed.family.sharing == .notShared)
+    #expect(!Seed.family.startsWithPendingJoin)
+  }
+
   @Test func longNameSeedHasOneChildWith30Characters() throws {
     let mode = try LaunchArguments.parse([executable, "--test-mode", "--seed", "long-name"])
     guard case .test(let environment) = mode else {
