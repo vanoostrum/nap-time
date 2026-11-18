@@ -17,6 +17,9 @@ public enum AppMode: Equatable, Sendable {
 
   /// False in test mode, so UI tests do not wait for animations and screenshots show the end state.
   public var areAnimationsEnabled: Bool { !usesInMemoryStore }
+
+  /// False in test mode: it requests no sleep timer. The UI tests render the timer's views instead (ADR 0003).
+  public var areLiveActivitiesEnabled: Bool { !usesInMemoryStore }
 }
 
 /// The fixed clock, time zone, and seed of test mode.

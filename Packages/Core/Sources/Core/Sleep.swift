@@ -24,7 +24,7 @@ public struct Sleep: Identifiable, Hashable, Sendable {
 }
 
 /// A night or a nap.
-public enum SleepKind: String, CaseIterable, Sendable {
+public enum SleepKind: String, CaseIterable, Codable, Sendable {
   case night
   case nap
 
