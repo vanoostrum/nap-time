@@ -188,7 +188,7 @@ struct AppDriver {
 
   /// Waits until the day sheet has closed.
   func waitForDaySheetToClose(file: StaticString = #filePath, line: UInt = #line) {
-    XCTAssertTrue(daySheet.waitForNonExistence(timeout: 10), "The day sheet is still open", file: file, line: line)
+    XCTAssertTrue(daySheet.disappears(within: 10), "The day sheet is still open", file: file, line: line)
   }
 
   /// Taps the dimmed charts above the day sheet.
