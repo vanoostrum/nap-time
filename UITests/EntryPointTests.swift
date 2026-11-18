@@ -425,6 +425,7 @@ final class EntryPointTests: XCTestCase {
     XCTAssertTrue(driver.button("Nap").isSelected)
   }
 
+  @MainActor
   private func assertGeneralTipsAndDoctorLine(
     _ driver: AppDriver, file: StaticString = #filePath, line: UInt = #line
   ) {
