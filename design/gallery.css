@@ -578,6 +578,7 @@ a.danger { text-decoration: none; }
 .field .hint.problem { color: var(--too-little); font-weight: 700; }
 
 /* Share the family: a child that is only on this phone, and joining a family */
+.avatar.three { background: #c9b6ff; }
 .list .item .tag { align-self: flex-start; margin-top: 4px; border-radius: 999px; background: var(--track); padding: 1px 10px; font-size: 13px; font-weight: 700; color: #5a6f88; }
 .spinner {
   width: 120px; height: 120px; border-radius: 50%;
