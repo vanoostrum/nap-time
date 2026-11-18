@@ -133,12 +133,13 @@ jobs:
             echo "exit $? at $(date -u +%H:%M:%S)"
           ) < /dev/null > build/boot.log 2>&1 &
           echo "Booting $SIMULATOR_ID in the background, from $(date -u +%H:%M:%S)"
+      # A generic destination, so xcodebuild does not wait for the booting simulator. arm64 only, as the simulator.
       - name: Build for testing
         run: |
           set -o pipefail
           xcodebuild build-for-testing -project NapTime.xcodeproj -scheme NapTime \
-            -destination "id=$SIMULATOR_ID" -derivedDataPath build/DerivedData \
-            CODE_SIGNING_ALLOWED=NO
+            -destination "generic/platform=iOS Simulator" -derivedDataPath build/DerivedData \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO
       # A failed test runs once more. A test that passes on the retry passes, and gets a warning in the export step.
       - name: Run the UI tests
         id: uitests
