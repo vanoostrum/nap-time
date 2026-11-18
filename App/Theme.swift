@@ -35,6 +35,9 @@ enum Theme {
   static let tooMuch = Color(hex: 0x6A4BD8)
   static let rangeBand = Color(hex: 0xD6F3E6)
   static let soFar = Color(hex: 0xA9C7E8)
+  /// The pale blue of a timeline track and a sleep on the day sheet.
+  static let track = Color(hex: 0xEAF5FF)
+  static let nap = Color(hex: 0xFF9F68)
   static let tooLittleShadow = Color(hex: 0x8A2A1B)
   static let handle = Color(hex: 0xC9D6E4)
   static let handleShadow = Color(hex: 0xA9B8C9)

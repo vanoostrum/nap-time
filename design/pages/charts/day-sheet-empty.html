@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day sheet of a day with no sleeps</title>
+<link rel="stylesheet" href="../../gallery.css">
+</head>
+<body>
+<main class="screen plain">
+<header class="week-head">
+<button class="round-arrow" aria-label="Previous week" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+<div class="title"><h1>Noah's week</h1><span>Mon 2 – Sun 8 Nov</span></div>
+<button class="round-arrow" aria-label="Next week"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+</header>
+<div class="stats">
+<div class="stat"><span class="label">Average</span><span class="value">1 h 30 m</span><span class="note">range 10–13 h</span></div>
+<div class="stat"><span class="label">In range</span><span class="value">0 of 1 day</span><span class="note">bed – · up –</span></div>
+</div>
+<section class="card">
+<h2>Hours per day</h2>
+<div class="bars"><div class="band" style="--lo:10;--hi:13" aria-hidden="true"></div>
+<span class="bar-gap" aria-hidden="true"></span>
+<button class="bar little" style="--h:1.50" aria-label="Tuesday 3 Nov, 1 h 30 m"></button>
+</div>
+<div class="days"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+<div class="legend"><span><i></i>in range</span><span><i class="little"></i>too little</span><span><i class="much"></i>too much</span></div>
+</section>
+<section class="card">
+<h2>When Noah slept</h2>
+<button class="row" aria-label="Monday 2 Nov details"><span class="d">Mon</span><span class="track"></span></button>
+<button class="row" aria-label="Tuesday 3 Nov details"><span class="d">Tue</span><span class="track"><span class="seg nap" style="--from:19;--len:1.5"></span></span></button>
+<button class="row" aria-label="Wednesday 4 Nov details"><span class="d">Wed</span><span class="track"></span></button>
+<button class="row" aria-label="Thursday 5 Nov details"><span class="d">Thu</span><span class="track"></span></button>
+<button class="row" aria-label="Friday 6 Nov details"><span class="d">Fri</span><span class="track"></span></button>
+<button class="row" aria-label="Saturday 7 Nov details"><span class="d">Sat</span><span class="track"></span></button>
+<button class="row" aria-label="Sunday 8 Nov details"><span class="d">Sun</span><span class="track"></span></button>
+<div class="axis"><span>18:00</span><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span></div>
+</section>
+<nav class="layer tabs"><a class="tab" href="../home/day.html">Today</a><a class="tab current" href="../charts/week.html">Charts</a></nav>
+<div class="scrim">
+<div class="sheet" role="dialog" aria-label="Day details">
+<div class="handle" aria-hidden="true"></div>
+<div class="sheet-head"><div><h2>Monday 2 Nov</h2><span>No sleeps logged</span></div></div>
+<button class="dashed">+ Add a sleep to this day</button>
+</div>
+</div>
+</main>
+</body>
+</html>

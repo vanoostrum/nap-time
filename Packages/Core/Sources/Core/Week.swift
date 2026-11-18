@@ -67,6 +67,17 @@ public struct WeekStats: Sendable {
     case inRange
     case tooLittle
     case tooMuch
+
+    /// How `total` compares with `range`. The limits are in range.
+    init(total: TimeInterval, range: RecommendedRange) {
+      if total < TimeInterval(range.lowerHours) * 3600 {
+        self = .tooLittle
+      } else if total > TimeInterval(range.upperHours) * 3600 {
+        self = .tooMuch
+      } else {
+        self = .inRange
+      }
+    }
   }
 
   public struct Day: Sendable {
@@ -79,16 +90,12 @@ public struct WeekStats: Sendable {
 
     /// How a counted day compares with its range. The limits are in range. `nil` for a day that is not counted.
     public var judgement: Judgement? {
-      guard state == .counted else { return nil }
-      if total < TimeInterval(range.lowerHours) * 3600 { return .tooLittle }
-      if total > TimeInterval(range.upperHours) * 3600 { return .tooMuch }
-      return .inRange
+      state == .counted ? Judgement(total: total, range: range) : nil
     }
 
     /// "Monday 2 Nov, 12 h 36 m", with " so far" on a day that has not ended.
     public var accessibilityLabel: String {
-      let name = sleepDay.name
-      let label = "\(name.weekdayName) \(name.day) \(name.shortMonth), \(SleepDuration.text(total))"
+      let label = "\(sleepDay.longTitle), \(SleepDuration.text(total))"
       return state == .soFar ? "\(label) so far" : label
     }
   }
@@ -101,13 +108,9 @@ public struct WeekStats: Sendable {
   public init(week: Week, sleeps: [Sleep], birthDate: BirthDate, now: Date, in timeZone: TimeZone) {
     self.week = week
     days = week.days.map { sleepDay in
-      let interval = sleepDay.interval(in: timeZone)
-      let total = sleeps.reduce(0) { total, sleep in
-        let start = max(sleep.start, interval.start)
-        let end = min(sleep.end ?? now, interval.end)
-        return total + max(0, end.timeIntervalSince(start))
-      }
-      let state: DayState = total <= 0 ? .empty : interval.end <= now ? .counted : .soFar
+      // A day has a sleep when a sleep crosses into it by more than zero time, so its total is above 0.
+      let total = sleepDay.asleep(in: sleeps, now: now, in: timeZone)
+      let state: DayState = total <= 0 ? .empty : sleepDay.hasEnded(now: now, in: timeZone) ? .counted : .soFar
       return Day(
         sleepDay: sleepDay, total: total, state: state, range: RecommendedRange(birthDate: birthDate, on: sleepDay.name)
       )
