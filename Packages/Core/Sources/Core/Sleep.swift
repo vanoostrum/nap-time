@@ -130,7 +130,7 @@ public struct ChildStatus: Equatable, Sendable {
   }
 }
 
-private func twoDigits(_ value: Int) -> String {
+func twoDigits(_ value: Int) -> String {
   value < 10 ? "0\(value)" : "\(value)"
 }
 

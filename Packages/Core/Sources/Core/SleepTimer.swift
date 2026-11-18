@@ -118,11 +118,3 @@ public enum SleepTimerRule {
     return a.id < b.id
   }
 }
-
-/// The ids of the app's notification requests.
-public enum NudgeID {
-  /// The long-sleep nudge of one sleep: "long-sleep-" and the sleep id.
-  public static func longSleep(sleepID: UUID) -> String {
-    "long-sleep-\(sleepID.uuidString)"
-  }
-}
