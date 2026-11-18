@@ -102,8 +102,12 @@ _Avoid_: alert, reminder, push
 The background of the home screen. It shows day, sunset, night, or sunrise from the sun times of Utrecht, and night while the selected child's night runs.
 _Avoid_: theme, mode, background
 
+**Timeline**:
+The chart "When <name> slept": one row per sleep day of the week, from 18:00 to 18:00, with a bar for each sleep.
+_Avoid_: actogram, sleep graph
+
 **Day sheet**:
-The sheet that slides up when a parent taps a sleep day in a chart, and lists that day's sleeps.
+The sheet that slides up when a parent taps a sleep day on the charts, as a bar or a timeline row. It lists the sleeps that cross into that day, with an edit button for each, and "Add a sleep to this day".
 _Avoid_: day details, popup, modal
 
 **Sleep timer**:
