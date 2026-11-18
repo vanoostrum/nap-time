@@ -200,7 +200,9 @@ private struct WhatToTryCard: View {
     VStack(alignment: .leading, spacing: 10) {
       Text("What to try").balooLine(18, .extraBold, lineHeight: 19)
       tip(card.message(name: name))
-        .balooLine(18, .bold, lineHeight: 23)
+        .font(.baloo(18, .bold))
+        // `line-height: 1.3` of `.try .tip`. A multiple of the point size, so it grows with Dynamic Type.
+        .lineHeight(.multiple(factor: 1.3))
         .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -209,16 +211,20 @@ private struct WhatToTryCard: View {
         .accessibilityIdentifier("tip")
       VStack(alignment: .leading, spacing: 0) {
         ForEach(card.generalTips, id: \.self) { tip in
-          HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text("•")
-            Text(tip).fixedSize(horizontal: false, vertical: true)
+          // The disc of a CSS list: the text starts 20 points in, with the disc in the middle of that space.
+          HStack(alignment: .firstTextBaseline, spacing: 0) {
+            Text("●").font(.system(size: 6)).baselineOffset(4).frame(width: 20)
+            Text(tip)
+              .fixedSize(horizontal: false, vertical: true)
+              .frame(maxWidth: .infinity, alignment: .leading)
           }
           .accessibilityElement(children: .combine)
           .accessibilityLabel(tip)
         }
       }
-      .balooLine(16, lineHeight: 22)
-      .padding(.leading, 6)
+      .font(.baloo(16))
+      // `line-height: 1.35` of `.try ul`.
+      .lineHeight(.multiple(factor: 1.35))
       Text(WhatToTry.doctorLine(name: name))
         .balooLine(14, lineHeight: 18)
         .fixedSize(horizontal: false, vertical: true)
