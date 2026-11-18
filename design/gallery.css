@@ -576,3 +576,19 @@ a.danger { text-decoration: none; }
 
 /* Edit sleep: times that cannot be saved */
 .field .hint.problem { color: var(--too-little); font-weight: 700; }
+
+/* Share the family: a child that is only on this phone, and joining a family */
+.avatar.three { background: #c9b6ff; }
+.list .item .tag { align-self: flex-start; margin-top: 4px; border-radius: 999px; background: var(--track); padding: 1px 10px; font-size: 13px; font-weight: 700; color: #5a6f88; }
+.spinner {
+  width: 120px; height: 120px; border-radius: 50%;
+  border: 12px solid var(--white); border-top-color: var(--navy);
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+
+/* Share card on Settings: title and subtitle */
+.list .item.share { padding: 16px; }
+.list .item.share .title { font-size: 21px; font-weight: 700; line-height: 1.2; }
+.list .item.share .small { margin-top: 4px; font-weight: 500; opacity: 0.8; }

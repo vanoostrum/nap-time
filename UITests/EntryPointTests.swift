@@ -32,7 +32,7 @@ final class EntryPointTests: XCTestCase {
     driver.attachScreenshot("add-child-filled", to: self)
   }
 
-  /// `home`: the home screen with Mila selected and awake. Page `home/day.html`.
+  /// `home`: the home screen with Mila selected and awake, with the gear. Page `home/day.html`.
   @MainActor
   func testHome() throws {
     let driver = AppDriver.launch(seed: "family")
@@ -42,11 +42,93 @@ final class EntryPointTests: XCTestCase {
     XCTAssertTrue(driver.text("since 06:55 · 11 h 10 m slept today").exists)
     XCTAssertTrue(driver.button("Sleep time").exists)
     XCTAssertTrue(driver.button("Add a sleep from earlier").exists)
-    XCTAssertFalse(driver.app.buttons["Settings"].exists)
+    XCTAssertTrue(driver.button("Settings").exists)
     XCTAssertTrue(driver.button("Today").isSelected)
     XCTAssertTrue(driver.button("Charts").exists)
     driver.waitForSky("day")
     driver.attachScreenshot("home", to: self)
+  }
+
+  /// `settings`: Settings with Mila and Noah, not shared yet. Page `settings/default.html`.
+  @MainActor
+  func testSettings() throws {
+    let driver = AppDriver.launch(seed: "family")
+    driver.openSettings()
+    XCTAssertEqual(driver.childRows, ["Mila", "Noah"])
+    XCTAssertEqual(driver.childRowValues, ["1 year · 11–14 h", "4 years · 10–13 h"])
+    XCTAssertTrue(driver.app.buttons["settings-add-child"].exists)
+    XCTAssertTrue(driver.text("Not shared yet").exists)
+    XCTAssertTrue(driver.text("Your partner sees and logs the same children and sleeps.").exists)
+    XCTAssertTrue(driver.button("Invite your partner").exists)
+    driver.attachScreenshot("settings", to: self)
+  }
+
+  /// `settings-shared`: Settings shared with Sam. Page `settings/shared.html`.
+  @MainActor
+  func testSettingsShared() throws {
+    let driver = AppDriver.launch(seed: "shared")
+    driver.openSettings()
+    driver.waitFor(driver.text("Shared with Sam"))
+    XCTAssertTrue(driver.text("You both see and log the same children and sleeps.").exists)
+    XCTAssertTrue(driver.button("Manage sharing").exists)
+    XCTAssertFalse(driver.button("Invite your partner").exists)
+    driver.attachScreenshot("settings-shared", to: self)
+  }
+
+  /// `settings-invited`: Settings with an invite sent. Page `settings/invited.html`.
+  @MainActor
+  func testSettingsInvited() throws {
+    let driver = AppDriver.launch(seed: "invited")
+    driver.openSettings()
+    driver.waitFor(driver.text("Invite sent"))
+    XCTAssertTrue(driver.text("Waiting for your partner to open the link.").exists)
+    XCTAssertTrue(driver.button("Manage sharing").exists)
+    driver.attachScreenshot("settings-invited", to: self)
+  }
+
+  /// `settings-partner`: the partner's Settings, with Lou only on this phone. Page `settings/partner.html`.
+  @MainActor
+  func testSettingsPartner() throws {
+    let driver = AppDriver.launch(seed: "partner")
+    driver.openSettings()
+    driver.waitFor(driver.text("Shared with you by Alex"))
+    XCTAssertEqual(driver.childRows, ["Mila", "Noah", "Lou"])
+    XCTAssertEqual(
+      driver.childRowValues, ["1 year · 11–14 h", "4 years · 10–13 h", "2 years · 11–14 h, Only on this phone"])
+    XCTAssertTrue(driver.button("Manage sharing").exists)
+    XCTAssertFalse(driver.button("Invite your partner").exists)
+    driver.attachScreenshot("settings-partner", to: self)
+  }
+
+  /// `settings-no-icloud`: Settings without an iCloud account. Page `settings/no-icloud.html`.
+  @MainActor
+  func testSettingsNoICloud() throws {
+    let driver = AppDriver.launch(seed: "no-icloud")
+    driver.openSettings()
+    driver.waitFor(driver.text("Sign in to iCloud in the iPhone Settings to share with your partner."))
+    XCTAssertTrue(driver.text("Not shared yet").exists)
+    XCTAssertFalse(driver.app.buttons["share-button"].exists)
+    driver.attachScreenshot("settings-no-icloud", to: self)
+  }
+
+  /// `joining`: "Joining the family…" before a shared child arrives. Page `family/joining.html`.
+  @MainActor
+  func testJoining() throws {
+    let driver = AppDriver.launch(seed: "joining")
+    driver.waitFor(driver.text("Joining the family…"))
+    XCTAssertTrue(driver.text("This takes a few seconds.").exists)
+    XCTAssertFalse(driver.text("Add your child").exists)
+    driver.attachScreenshot("joining", to: self)
+  }
+
+  /// `joined`: "You joined the family" with Mila and Noah. Page `family/joined.html`.
+  @MainActor
+  func testJoined() throws {
+    let driver = AppDriver.launch(seed: "joined")
+    driver.waitFor(driver.text("You joined the family"))
+    XCTAssertTrue(driver.text("You now see and log Mila and Noah, together with your partner.").exists)
+    XCTAssertTrue(driver.button("Start").exists)
+    driver.attachScreenshot("joined", to: self)
   }
 
   /// `home-sleeping`: Mila sleeps a night since 19:42, at 21:56. Page `home/night.html`.

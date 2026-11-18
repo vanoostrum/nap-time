@@ -22,6 +22,8 @@ struct HomeView: View {
   var onStatusLine: (() -> Void)?
   /// A tap on the tab bar. `nil` hides the tab bar, as with no children.
   var onTab: ((AppTab) -> Void)?
+  /// The gear, which opens Settings. `nil` hides it.
+  var onSettings: (() -> Void)?
 
   /// Counts taps on the main button, for the haptic tap.
   @State private var mainButtonTaps = 0
@@ -93,6 +95,17 @@ struct HomeView: View {
       }
       .accessibilityLabel("Add a child")
       Spacer(minLength: 0)
+      if let onSettings {
+        Button(action: onSettings) {
+          Image(systemName: "gearshape")
+            .font(.system(size: 22, weight: .bold))
+            .foregroundStyle(colors.gearInk)
+            .frame(width: 48, height: 48)
+            .background(Circle().fill(colors.gearFill))
+        }
+        .accessibilityLabel("Settings")
+        .accessibilityIdentifier("gear")
+      }
     }
   }
 
@@ -201,6 +214,9 @@ private struct HomeColors {
   /// The "+" of the switcher.
   let add: Color
   let photoBorder: Color
+  /// The round gear button: white by day, the tab colour at night.
+  let gearFill: Color
+  let gearInk: Color
   /// The main button is gold at night and at sunset, navy by day and at sunrise.
   let goldButton: Bool
 
@@ -209,25 +225,25 @@ private struct HomeColors {
     case .day:
       HomeColors(
         heading: Theme.navy, line: Theme.navy, link: Theme.navy, ring: Theme.navy, add: Theme.navy,
-        photoBorder: .white, goldButton: false)
+        photoBorder: .white, gearFill: .white, gearInk: Theme.navy, goldButton: false)
     case .night:
       HomeColors(
         heading: Theme.cream, line: Theme.gold, link: Theme.gold, ring: Theme.cream, add: Theme.cream,
-        photoBorder: Theme.nightTab, goldButton: true)
+        photoBorder: Theme.nightTab, gearFill: Theme.nightTab, gearInk: Theme.cream, goldButton: true)
     case .sunset:
       HomeColors(
         heading: Theme.duskInk, line: Theme.duskInk, link: Theme.duskInk, ring: Theme.duskInk, add: Theme.navy,
-        photoBorder: .white, goldButton: true)
+        photoBorder: .white, gearFill: .white, gearInk: Theme.navy, goldButton: true)
     case .sunrise:
       HomeColors(
         heading: Theme.navy, line: Theme.navy, link: .white, ring: Theme.navy, add: Theme.navy,
-        photoBorder: .white, goldButton: false)
+        photoBorder: .white, gearFill: .white, gearInk: Theme.navy, goldButton: false)
     }
   }
 }
 
 /// The big main button of the home screen: navy, or gold at night and at sunset.
-private struct MainButtonStyle: ButtonStyle {
+struct MainButtonStyle: ButtonStyle {
   let gold: Bool
 
   func makeBody(configuration: Configuration) -> some View {
@@ -245,7 +261,7 @@ private struct MainButtonStyle: ButtonStyle {
   }
 }
 
-private struct MainButtonLabelStyle: LabelStyle {
+struct MainButtonLabelStyle: LabelStyle {
   let iconColor: Color
 
   func makeBody(configuration: Configuration) -> some View {

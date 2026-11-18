@@ -29,6 +29,8 @@ struct SleepFormView: View {
   let sleeps: [Sleep]
   let now: Date
   let calendar: Calendar
+  /// The child is only on this phone, so a delete reaches only this phone.
+  var onlyOnThisPhone = false
   let onSave: (Sleep) throws -> Void
   var onCancel: () -> Void = {}
   var onDelete: (Sleep) throws -> Void = { _ in }
@@ -51,7 +53,7 @@ struct SleepFormView: View {
   }
 
   init(
-    mode: SleepFormMode, child: Child, sleeps: [Sleep], now: Date, calendar: Calendar,
+    mode: SleepFormMode, child: Child, sleeps: [Sleep], now: Date, calendar: Calendar, onlyOnThisPhone: Bool = false,
     onSave: @escaping (Sleep) throws -> Void, onCancel: @escaping () -> Void = {},
     onDelete: @escaping (Sleep) throws -> Void = { _ in }
   ) {
@@ -60,6 +62,7 @@ struct SleepFormView: View {
     self.sleeps = sleeps
     self.now = now
     self.calendar = calendar
+    self.onlyOnThisPhone = onlyOnThisPhone
     self.onSave = onSave
     self.onCancel = onCancel
     self.onDelete = onDelete
@@ -314,17 +317,14 @@ struct SleepFormView: View {
   }
 
   private func deleteConfirmation(_ sleep: Sleep) -> some View {
-    let range = "\(ClockTime.text(sleep.start, in: timeZone)) to \(ClockTime.text(sleep.end ?? now, in: timeZone))"
-    return ZStack(alignment: .bottom) {
+    ZStack(alignment: .bottom) {
       Theme.scrim.ignoresSafeArea()
       VStack(spacing: 10) {
         Text("Delete this sleep?")
           .font(.baloo(26, .extraBold))
           .accessibilityAddTraits(.isHeader)
-        Text(
-          "This deletes \(child.name)'s \(sleep.kind.rawValue) from \(range), on both phones. You cannot undo this."
-        )
-        .font(.baloo(17))
+        Text(DeleteText.sleep(sleep, name: child.name, onlyOnThisPhone: onlyOnThisPhone, now: now, in: timeZone))
+          .font(.baloo(17))
         Button("Delete sleep") { delete(sleep) }
           .buttonStyle(PrimaryButtonStyle(destructive: true))
           .padding(.top, 6)

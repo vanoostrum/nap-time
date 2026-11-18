@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Verify Nap Time as the required checks do. Lints, builds, and tests Core in this session, then waits for the CI checks Core (Linux) and App (iOS) on the PR. Use before every commit of a craft build, and when asked to verify.
+description: Verify Nap Time as the required checks do. Lints, builds, and tests Core, and tests the CI change script, in this session, then waits for the CI checks Core (Linux) and App (iOS) on the PR. Use before every commit of a craft build, and when asked to verify.
 ---
 
 # verify
@@ -22,6 +22,7 @@ It runs from any folder. It runs, in order, and stops at the first failed step:
 2. The lint: `swift format lint --strict --recursive .`. To fix the format, run `swift format -i --recursive <paths>`.
 3. `swift build --package-path Packages/Core`.
 4. `swift test --package-path Packages/Core`.
+5. `Test the change script`: `python3 -m unittest discover -s scripts -p 'test_*.py'`. These tests check `scripts/ci_changes.py`, which decides if the `Screenshots` job runs on a PR. `Core (Linux)` runs the same step.
 
 It ends with `verify: PASS`, or with `verify: FAIL at step '<step>'` after that step's output.
 

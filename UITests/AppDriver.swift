@@ -21,6 +21,7 @@ struct AppDriver {
   /// Waits until the sky has this value, and fails the test when it does not.
   func waitForSky(_ value: String, file: StaticString = #filePath, line: UInt = #line) {
     waitFor(sky, file: file, line: line)
+    if (sky.value as? String) == value { return }
     let matches = NSPredicate(format: "value == %@", value)
     let result = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: matches, object: sky)], timeout: 10)
     XCTAssertEqual(result, .completed, "The sky is \(sky.value ?? "nil"), not \(value)", file: file, line: line)
@@ -37,7 +38,7 @@ struct AppDriver {
 
   /// Waits for an element and fails the test when it does not show.
   func waitFor(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
-    XCTAssertTrue(element.waitForExistence(timeout: 30), "Not found: \(element)", file: file, line: line)
+    XCTAssertTrue(element.appears(within: 30), "Not found: \(element)", file: file, line: line)
   }
 
   /// Types into the name field and closes the keyboard.
@@ -80,7 +81,7 @@ struct AppDriver {
     monthWheel?.adjust(toPickerWheelValue: month)
     dayWheel?.adjust(toPickerWheelValue: String(day))
     button("Done").tap()
-    XCTAssertTrue(wheels.firstMatch.waitForNonExistence(timeout: 10))
+    XCTAssertTrue(wheels.firstMatch.disappears(within: 10))
   }
 
   /// Touches and holds a child's avatar, which opens Edit child.
@@ -90,10 +91,26 @@ struct AppDriver {
     avatar.press(forDuration: 1.2)
     // A busy CI simulator sometimes drops the synthesized press (seen in CRAFT-43 and CRAFT-44 runs),
     // so press once more. The test still fails when Edit child does not open.
-    if !text("Edit child").waitForExistence(timeout: 10) {
+    if !text("Edit child").appears(within: 10) {
       avatar.press(forDuration: 1.2)
     }
     waitFor(text("Edit child"))
+  }
+
+  /// Taps Delete on the delete confirmation of Edit child, after it shows and can take a tap.
+  /// Every UI test that deletes a child uses this: a tap before the confirmation shows fails on a busy simulator.
+  func confirmDeleteChild(file: StaticString = #filePath, line: UInt = #line) {
+    let confirm = app.buttons["confirm-delete"]
+    waitFor(confirm, file: file, line: line)
+    if confirm.isHittable {
+      confirm.tap()
+      return
+    }
+    let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: confirm)
+    XCTAssertEqual(
+      XCTWaiter().wait(for: [hittable], timeout: 10), .completed, "confirm-delete cannot take a tap", file: file,
+      line: line)
+    confirm.tap()
   }
 
   /// Taps the home screen's status line, which opens the running sleep or the last sleep.
@@ -116,7 +133,7 @@ struct AppDriver {
   /// Waits until the sleep form has closed.
   func waitForFormToClose(file: StaticString = #filePath, line: UInt = #line) {
     XCTAssertTrue(
-      app.descendants(matching: .any)["sleep-form"].waitForNonExistence(timeout: 10), "The sleep form is still open",
+      app.descendants(matching: .any)["sleep-form"].disappears(within: 10), "The sleep form is still open",
       file: file,
       line: line)
   }
@@ -171,7 +188,7 @@ struct AppDriver {
 
   /// Waits until the day sheet has closed.
   func waitForDaySheetToClose(file: StaticString = #filePath, line: UInt = #line) {
-    XCTAssertTrue(daySheet.waitForNonExistence(timeout: 10), "The day sheet is still open", file: file, line: line)
+    XCTAssertTrue(daySheet.disappears(within: 10), "The day sheet is still open", file: file, line: line)
   }
 
   /// Taps the dimmed charts above the day sheet.
@@ -203,11 +220,60 @@ struct AppDriver {
     }
   }
 
+  /// Taps the gear on the home screen and waits for Settings.
+  func openSettings() {
+    let gear = button("Settings")
+    waitFor(gear)
+    gear.tap()
+    waitFor(app.descendants(matching: .any)["settings"])
+  }
+
+  /// The child rows in Settings, by name, top first.
+  var childRows: [String] {
+    let rows = app.descendants(matching: .any).matching(identifier: "child-row")
+    return (0..<rows.count).map { rows.element(boundBy: $0).label }
+  }
+
+  /// The second line of each child row in Settings, top first, such as "1 year · 11–14 h", with
+  /// ", Only on this phone" for a child only on this phone.
+  var childRowValues: [String] {
+    let rows = app.descendants(matching: .any).matching(identifier: "child-row")
+    return (0..<rows.count).map { (rows.element(boundBy: $0).value as? String) ?? "" }
+  }
+
+  /// Taps a child's row in Settings and waits for Edit child.
+  func openChildRow(_ name: String) {
+    let row = app.descendants(matching: .any).matching(identifier: "child-row")
+      .matching(NSPredicate(format: "label == %@", name)).firstMatch
+    waitFor(row)
+    row.tap()
+    waitFor(text("Edit child"))
+  }
+
+  /// Waits for an alert with this title, and fails the test when it does not show.
+  func waitForAlert(_ title: String, file: StaticString = #filePath, line: UInt = #line) {
+    waitFor(app.alerts[title], file: file, line: line)
+  }
+
   func attachScreenshot(_ entryPoint: String, to testCase: XCTestCase) {
     let attachment = XCTAttachment(
       data: app.screenshot().pngRepresentation, uniformTypeIdentifier: "public.png")
     attachment.name = "\(entryPoint).png"
     attachment.lifetime = .keepAlways
     testCase.add(attachment)
+  }
+}
+
+@MainActor
+extension XCUIElement {
+  /// True when the element shows within the timeout. Checks at once first: `waitForExistence`
+  /// checks only after one second, even when the element is already there, and the UI tests wait often.
+  func appears(within timeout: TimeInterval) -> Bool {
+    exists || waitForExistence(timeout: timeout)
+  }
+
+  /// True when the element is gone within the timeout. Checks at once first, as `appears(within:)` does.
+  func disappears(within timeout: TimeInterval) -> Bool {
+    !exists || waitForNonExistence(timeout: timeout)
   }
 }

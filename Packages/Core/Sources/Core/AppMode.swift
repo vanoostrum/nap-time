@@ -4,7 +4,7 @@ import Foundation
 public enum AppMode: Equatable, Sendable {
   /// The normal mode: the family store on disk, synced with CloudKit, with notifications.
   case normal
-  /// Test mode: an in-memory store, a fixed clock, no CloudKit, no notifications.
+  /// Test mode: an in-memory store, a fixed clock, no CloudKit, no notifications, no animations.
   case test(TestEnvironment)
 
   public var usesInMemoryStore: Bool {
@@ -14,6 +14,9 @@ public enum AppMode: Equatable, Sendable {
   public var isCloudKitEnabled: Bool { !usesInMemoryStore }
 
   public var areNotificationsEnabled: Bool { !usesInMemoryStore }
+
+  /// False in test mode, so UI tests do not wait for animations and screenshots show the end state.
+  public var areAnimationsEnabled: Bool { !usesInMemoryStore }
 }
 
 /// The fixed clock, time zone, and seed of test mode.

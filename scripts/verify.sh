@@ -1,5 +1,5 @@
 #!/bin/bash
-# Local verify for Nap Time: lint, then build and test Core. Runs on Linux and macOS.
+# Local verify for Nap Time: lint, build and test Core, then test the CI change script. Runs on Linux and macOS.
 # On Linux, it first installs the Swift version in .swift-version when Swift is missing or wrong.
 # Prints the first failed step. Usage: scripts/verify.sh
 set -uo pipefail
@@ -47,4 +47,5 @@ fi
 run "Lint" swift format lint --strict --recursive .
 run "Build Core" swift build --package-path Packages/Core
 run "Test Core" swift test --package-path Packages/Core
+run "Test the change script" env PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts -p 'test_*.py'
 echo "verify: PASS"
