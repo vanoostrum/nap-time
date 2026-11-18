@@ -145,13 +145,15 @@ final class AppModel {
       center.addObserver(
         forName: .NSPersistentStoreRemoteChange, object: store.container.persistentStoreCoordinator, queue: .main
       ) { [weak self] _ in
-        MainActor.assumeIsolated {
-          // The store reloads its data only later, in a task. So refresh it first.
-          Task {
-            await store.refresh()
-            self?.storeChanged()
-          }
-        }
+        MainActor.assumeIsolated { self?.remoteChange(store) }
       })
+  }
+
+  /// The store reloads its data only later, in a task. So refresh it first.
+  private func remoteChange(_ store: FamilyStore) {
+    Task {
+      await store.refresh()
+      storeChanged()
+    }
   }
 }
