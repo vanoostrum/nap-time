@@ -7,7 +7,8 @@ Default: the head commit of the open PR of the current branch, the entry points 
 
 It waits up to --timeout minutes (default 30) for the `Screenshots` run of the commit to exist and finish.
 It downloads the `screenshots` artifact, or reads the branch `screenshots/<branch>` when the artifact host
-is not reachable. It prints PASS, or FAIL with every reason, and exits 0 or 1.
+is not reachable. It prints PASS, or FAIL with every reason, and exits 0 or 1. When the run was skipped, because the PR changes
+only skip-list paths (ADR 0003), it prints SKIPPED and exits 0.
 """
 
 import argparse
@@ -122,6 +123,9 @@ def main():
         print(f"FAIL: {run['missing']}")
         return 1
     print(f"{CHECK} run: {run['conclusion']} — {run['html_url']}")
+    if run["conclusion"] == "skipped":
+        print(f"SKIPPED: {CHECK} did not run for {sha}, because the PR changes no app code")
+        return 0
 
     files, source = from_artifact(run)
     if files is None:

@@ -11,6 +11,7 @@ import Testing
     #expect(!mode.usesInMemoryStore)
     #expect(mode.isCloudKitEnabled)
     #expect(mode.areNotificationsEnabled)
+    #expect(mode.areAnimationsEnabled)
   }
 
   @Test func nowWithoutTestModeIsIgnoredEvenWhenBad() throws {
@@ -27,6 +28,7 @@ import Testing
     #expect(mode.usesInMemoryStore)
     #expect(!mode.isCloudKitEnabled)
     #expect(!mode.areNotificationsEnabled)
+    #expect(!mode.areAnimationsEnabled)
     #expect(environment.now == date("2026-06-21T10:00:00+02:00"))
     #expect(environment.timeZone.identifier == "Europe/Amsterdam")
   }

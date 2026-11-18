@@ -62,6 +62,8 @@ It uses the head commit of the open PR of the current branch (or `--pr N`, or `-
 
 It ends with `PASS: <n> entry points from <source>`, or with one `FAIL:` line per problem, and exits 0 or 1.
 
+When the `Changes` job skipped the `Screenshots` run, because the PR changes only skip-list paths (ADR 0003), it prints `SKIPPED: Screenshots did not run for <sha>, because the PR changes no app code` and exits 0. There are no screenshots then. A ticket with the `ui` label changes app code, so for it, treat `SKIPPED` as a fail.
+
 ## Look at the screenshots
 
 Open each PNG in `build/evidence/<sha>/` with the Read tool, and check that it shows what the ticket says. A PNG that exists but shows the wrong screen is a fail.
