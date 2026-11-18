@@ -1,6 +1,7 @@
 import AppIntents
 import CloudKit
 import Core
+import CoreData
 import NapTimeStore
 import OSLog
 import Observation
@@ -43,8 +44,8 @@ final class OpenedInvites {
 
 /// The one owner of the family store, created at launch outside a view, so a background launch has the store too.
 ///
-/// It loads the store, holds the selected child and the tab, creates the sleep timer controller, and registers the
-/// store for `EndSleepIntent`. `RootView` reads it.
+/// It loads the store, holds the selected child and the tab, creates the sleep timer controller and the nudge
+/// scheduler, runs their triggers, and registers the store for `EndSleepIntent`. `RootView` reads it.
 @MainActor @Observable
 final class AppModel {
   static let shared = AppModel()
@@ -65,6 +66,8 @@ final class AppModel {
 
   @ObservationIgnored private var load: Task<FamilyStore?, Never>?
   @ObservationIgnored private(set) var sleepTimers: SleepTimerController?
+  @ObservationIgnored private(set) var nudges: NudgeScheduler?
+  @ObservationIgnored private var observers: [any NSObjectProtocol] = []
 
   private static let logger = Logger(subsystem: "nl.clearblocks.naptime", category: "FamilyStore")
   private static let selectedChildKey = "selectedChildID"
@@ -73,6 +76,8 @@ final class AppModel {
   func launch(_ mode: AppMode) {
     guard load == nil else { return }
     self.mode = mode
+    // Here, not after the load, so the tap on a nudge that launched the app reaches its delegate.
+    nudges = NudgeScheduler(mode: mode)
     AppDependencyManager.shared.add(dependency: FamilyStoreAccess { await AppModel.shared.loadedStore() })
     load = Task { await loadStore() }
   }
@@ -105,9 +110,12 @@ final class AppModel {
       }
       let timers = SleepTimerController(store: store, mode: mode)
       sleepTimers = timers
-      // One closure for every save: it reconciles the sleep timers. CRAFT-52 adds the nudge plan here.
-      store.onSave = { [weak timers] in timers?.reconcile() }
+      nudges?.store = store
+      // One closure for every save and every change of `sharing`: it reconciles the sleep timers and plans the nudges.
+      store.onSave = { [weak self] in self?.storeChanged() }
       timers.start()
+      nudges?.plan()
+      observe(store)
       phase = .ready(store)
       return store
     } catch {
@@ -115,5 +123,35 @@ final class AppModel {
       phase = .failed
       return nil
     }
+  }
+
+  /// The timers and the nudges follow the store.
+  private func storeChanged() {
+    sleepTimers?.reconcile()
+    nudges?.plan()
+  }
+
+  /// In the normal mode: when the app becomes active, and on a remote change after one refresh of the store.
+  /// Test mode has no timers and no nudges, so it observes nothing.
+  private func observe(_ store: FamilyStore) {
+    guard mode == .normal else { return }
+    let center = NotificationCenter.default
+    observers.append(
+      center.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) {
+        [weak self] _ in
+        MainActor.assumeIsolated { self?.storeChanged() }
+      })
+    observers.append(
+      center.addObserver(
+        forName: .NSPersistentStoreRemoteChange, object: store.container.persistentStoreCoordinator, queue: .main
+      ) { [weak self] _ in
+        MainActor.assumeIsolated {
+          // The store reloads its data only later, in a task. So refresh it first.
+          Task {
+            await store.refresh()
+            self?.storeChanged()
+          }
+        }
+      })
   }
 }

@@ -1,6 +1,5 @@
 import ActivityKit
 import Core
-import CoreData
 import Foundation
 import NapTimeStore
 import OSLog
@@ -8,14 +7,13 @@ import UIKit
 
 /// Requests, schedules, updates, and ends the sleep timers on this phone (ADR 0008).
 ///
-/// The app creates it at launch, outside a view. It reconciles at launch, when the app becomes active, after each
+/// `AppModel` creates it at launch, outside a view, and reconciles at launch, when the app becomes active, after each
 /// save of the family store (`FamilyStore.onSave`), and on each remote change. Test mode requests no Live Activity:
 /// with `AppMode.areLiveActivitiesEnabled` false, every method does nothing.
 @MainActor
 final class SleepTimerController {
   private let store: FamilyStore
   private let isEnabled: Bool
-  private var observers: [any NSObjectProtocol] = []
 
   private static let logger = Logger(subsystem: "nl.clearblocks.naptime", category: "SleepTimer")
   /// The silent sound of a scheduled start, in the app bundle: Theo wants no sound at 04:00.
@@ -26,21 +24,8 @@ final class SleepTimerController {
     self.isEnabled = mode.areLiveActivitiesEnabled
   }
 
-  /// Starts the triggers, and reconciles once for the launch.
+  /// Reconciles once for the launch. `AppModel` runs the other triggers.
   func start() {
-    guard isEnabled else { return }
-    let center = NotificationCenter.default
-    observers.append(
-      center.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) {
-        [weak self] _ in
-        MainActor.assumeIsolated { self?.reconcile() }
-      })
-    observers.append(
-      center.addObserver(
-        forName: .NSPersistentStoreRemoteChange, object: store.container.persistentStoreCoordinator, queue: .main
-      ) { [weak self] _ in
-        MainActor.assumeIsolated { self?.remoteChange() }
-      })
     reconcile()
   }
 
@@ -72,14 +57,6 @@ final class SleepTimerController {
     let isForeground = UIApplication.shared.applicationState == .active
     for change in changes {
       apply(change, to: timers, isForeground: isForeground)
-    }
-  }
-
-  /// The store reloads its data only later, in a task. So refresh it first, then reconcile.
-  private func remoteChange() {
-    Task {
-      await store.refresh()
-      reconcile()
     }
   }
 
