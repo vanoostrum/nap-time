@@ -476,17 +476,6 @@ private struct DaySheetView: View {
   }
 }
 
-extension View {
-  /// Sets Baloo 2 and trims its extra leading, so one line at the default text size is as tall as CSS
-  /// `line-height` makes it in the gallery. Baloo 2's own line height is much taller, so without this the cards
-  /// and the day sheet grow taller than their gallery pages. Only the empty space above and below the glyphs
-  /// is trimmed, by a fixed amount: long text still wraps, and larger Dynamic Type sizes still grow.
-  func balooLine(_ size: CGFloat, _ weight: Baloo = .semiBold, lineHeight: CGFloat) -> some View {
-    let natural = UIFont(name: weight.rawValue, size: size)?.lineHeight ?? lineHeight
-    return font(.baloo(size, weight)).padding(.vertical, min(0, (lineHeight - natural) / 2))
-  }
-}
-
 /// "20:54 → 06:12" with a bold arrow: Baloo 2 has no "→", and the fallback glyph is thin.
 private func times(_ text: String) -> Text {
   let parts = text.components(separatedBy: " → ")

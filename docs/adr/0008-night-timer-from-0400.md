@@ -1,0 +1,3 @@
+# A night's sleep timer starts at 04:00 with a scheduled Live Activity
+
+iOS keeps a Live Activity active for at most 8 hours. A night from 19:45 to 07:00 lasts longer, and a timer on the Lock Screen all evening is not useful. So a night's timer is one Live Activity with the iOS 26 scheduled start, at 04:00 local time, and it runs until wake-up or 12:00. It counts from the real bedtime. A nap's timer starts at once. A scheduled start needs an alert configuration, so the app passes a bundled silent sound: Theo wants no sound at 04:00. An app in the background cannot request a Live Activity, so the sleep id is in the content state, and a timer follows a merged sleep with an update. (Theo, 2026-11-16)

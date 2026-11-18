@@ -3,9 +3,10 @@ import CoreData
 import CoreGraphics
 import Foundation
 import ImageIO
-import NapTimeStore
 import Testing
 import UniformTypeIdentifiers
+
+@testable import NapTimeStore
 
 @Suite struct FamilyStoreTests {
   private let testMode = AppMode.test(.standard)
@@ -369,6 +370,94 @@ import UniformTypeIdentifiers
     #expect(try store.container.viewContext.count(for: request) == 1)
   }
 
+  // MARK: onSave
+
+  /// Criterion 25 of CRAFT-51: each save of a sleep or a child calls `onSave` once.
+  @Test @MainActor func eachSaveOfASleepOrAChildCallsOnSaveOnce() async throws {
+    let store = try await inMemoryStore(now: date("2026-06-21T21:56:00+02:00"))
+    var calls = 0
+    store.onSave = { calls += 1 }
+
+    let mila = try await store.add(name: "Mila", birthDate: day(2025, 3, 12), photo: nil)
+    await store.processStoreChange()
+    #expect(calls == 1, "add")
+
+    try await store.update(mila.id, name: "Mila", birthDate: day(2025, 3, 13), newPhoto: nil)
+    await store.processStoreChange()
+    #expect(calls == 2, "update")
+
+    try store.startSleep(childID: mila.id, at: date("2026-06-21T19:42:00+02:00"), kind: .night)
+    await store.processStoreChange()
+    #expect(calls == 3, "startSleep")
+
+    try store.startSleep(childID: mila.id, at: date("2026-06-21T19:45:00+02:00"), kind: .night)
+    await store.processStoreChange()
+    #expect(calls == 3, "a second startSleep saves nothing")
+
+    try store.endSleep(childID: mila.id, at: date("2026-06-21T21:00:00+02:00"))
+    await store.processStoreChange()
+    #expect(calls == 4, "endSleep")
+
+    var sleep = try #require(store.sleeps(of: mila.id).first)
+    sleep.start = date("2026-06-21T19:30:00+02:00")
+    try store.saveSleep(sleep)
+    await store.processStoreChange()
+    #expect(calls == 5, "saveSleep")
+
+    try store.deleteSleep(id: sleep.id)
+    await store.processStoreChange()
+    #expect(calls == 6, "deleteSleep")
+
+    try store.delete(mila.id)
+    await store.processStoreChange()
+    #expect(calls == 7, "delete")
+  }
+
+  /// Criterion 24 of CRAFT-50: the merge save calls `onSave` once.
+  @Test @MainActor func mergeSaveCallsOnSaveOnce() async throws {
+    let store = try await load(.family, now: "2026-06-22T07:30:00+02:00")
+    var calls = 0
+    store.onSave = { calls += 1 }
+    let mila = try #require(store.children.first { $0.name == "Mila" })
+    try store.insertAsIfSynced(
+      Sleep(
+        id: UUID(), childID: mila.id, start: date("2026-06-21T13:00:00+02:00"),
+        end: date("2026-06-21T14:00:00+02:00"), kind: .nap))
+    try store.insertAsIfSynced(
+      Sleep(
+        id: UUID(), childID: mila.id, start: date("2026-06-21T13:30:00+02:00"),
+        end: date("2026-06-21T15:00:00+02:00"), kind: .nap))
+
+    await store.processStoreChange()
+    await store.processStoreChange()
+
+    let naps = store.sleeps(of: mila.id).filter { $0.kind == .nap }
+    #expect(naps.map(\.start) == [date("2026-06-21T13:00:00+02:00")])
+    #expect(naps.map(\.end) == [date("2026-06-21T15:00:00+02:00")])
+    #expect(calls == 1)
+  }
+
+  /// Criterion 24 of CRAFT-50: a placement save and a successful move into the share each call `onSave` once. A
+  /// failed move does not.
+  @Test @MainActor func moveIntoShareCallsOnSaveOnce() async throws {
+    let seam = RecordingShareMoving(failures: 1)
+    let store = try await load(.shared, shareMoving: seam)
+    var calls = 0
+    store.onSave = { calls += 1 }
+    let mila = try #require(store.children.first { $0.name == "Mila" })
+
+    try store.startSleep(childID: mila.id, at: date("2026-06-21T09:00:00+02:00"), kind: .nap)
+    #expect(calls == 1, "the placement save")
+    let running = store.sleeps(of: mila.id).first { $0.isRunning }
+    let sleep = try #require(running)
+
+    await store.processStoreChange()
+
+    #expect(seam.attempts == 2, "The first move failed, the second moved the sleep")
+    #expect(seam.moved == [sleep.id])
+    #expect(calls == 2)
+  }
+
   // MARK: Helpers
 
   private func date(_ iso: String) -> Date {
@@ -384,6 +473,16 @@ import UniformTypeIdentifiers
 
   private func day(_ year: Int, _ month: Int, _ day: Int) -> BirthDate {
     BirthDate(year: year, month: month, day: day)!
+  }
+
+  @MainActor private func load(
+    _ seed: Seed, now: String? = nil, shareMoving: (any ShareMoving)? = nil
+  ) async throws -> FamilyStore {
+    let standard = TestEnvironment.standard
+    let environment = TestEnvironment(
+      now: now.map(date) ?? standard.now, timeZone: standard.timeZone, seed: seed)
+    return try await FamilyStore.load(
+      .test(environment), appGroupContainerURL: nil, seedPhoto: { _ in nil }, shareMoving: shareMoving)
   }
 
   /// A generated image with two colours, encoded as `type`.

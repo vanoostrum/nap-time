@@ -20,6 +20,8 @@ struct NapTimeApp: App {
     if !mode.areAnimationsEnabled {
       UIView.setAnimationsEnabled(false)
     }
+    // The store, the sleep timers, and "Awake" start here, outside a view, so a background launch has them too.
+    AppModel.shared.launch(mode)
   }
 
   var body: some Scene {
