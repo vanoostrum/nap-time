@@ -34,7 +34,7 @@ struct ChartsView: View {
     let stats = WeekStats(week: week, sleeps: sleeps, birthDate: child.birthDate, now: now, in: timeZone)
     ZStack {
       Theme.daySkyMid.ignoresSafeArea()
-      VStack(spacing: 12) {
+      VStack(spacing: 6) {
         ScrollView {
           VStack(spacing: 12) {
             header
@@ -48,9 +48,12 @@ struct ChartsView: View {
               emptyCard
             }
           }
-          .padding(.top, 4)
+          // The header starts 54 points from the top of the screen, as `.screen.plain` in the gallery.
+          .padding(.top, 54)
         }
         .scrollBounceBehavior(.basedOnSize)
+        .scrollIndicators(.hidden)
+        .ignoresSafeArea(edges: .top)
         TabBar(current: .charts, onSelect: onTab)
       }
       .foregroundStyle(Theme.navy)
@@ -106,7 +109,7 @@ struct ChartsView: View {
     HStack {
       arrow(-1)
       Spacer(minLength: 0)
-      VStack(spacing: -6) {
+      VStack(spacing: -8) {
         Text("\(child.name)'s week")
           .font(.baloo(28, .extraBold))
           .lineLimit(1)
@@ -190,7 +193,7 @@ private struct StatCard: View {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.horizontal, 16)
-    .padding(.vertical, 8)
+    .padding(.vertical, 4)
     .background(RoundedRectangle(cornerRadius: 24).fill(.white))
   }
 }
