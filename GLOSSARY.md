@@ -9,11 +9,11 @@ The local Swift package `Packages/Core`, which holds all pure logic and imports 
 _Avoid_: domain module, model layer
 
 **Test mode**:
-The app mode that CI starts with launch arguments: an in-memory store with seeded data, a fixed clock, and a fixed location, with CloudKit and notifications off.
+The app mode that CI starts with launch arguments: in-memory storage with the data of a named seed and a fixed clock. It turns off what a CI run cannot use or must keep still, such as CloudKit, notifications, and animations. The `…Enabled` flags of `AppMode` list each one.
 _Avoid_: demo mode, mock mode, UI test mode
 
 **Screenshot evidence**:
-The PNG files in the `screenshots` artifact of the `Screenshots` CI job, one per entry point. They are how an agent proves a screen.
+The PNG files that the `Screenshots` CI job saves, one per entry point. The job pushes them to the branch `screenshots/<branch>`, in the folder `<head sha>/`, and uploads them as the `screenshots` artifact. Cloud agents read them from the branch, because they cannot reach the artifact host. They are how an agent proves a screen.
 _Avoid_: snapshots, golden images
 
 **Family store**:
@@ -21,7 +21,7 @@ The on-device store in the App Group container, which the app, the widget, and t
 _Avoid_: database, cache
 
 **Entry point**:
-A screen or view that `drive-app` expects a screenshot of, such as `home` or `live-activity`. Each entry point gives one PNG in the `screenshots` artifact, named after it.
+A screen or view that `drive-app` expects a screenshot of, such as `home` or `add-child`. Each entry point gives one PNG named after it, in `screenshots/<branch>/<head sha>/`.
 _Avoid_: screen ID, route
 
 ### Children and sleep
@@ -57,12 +57,16 @@ _Avoid_: active sleep, open sleep, timer
 ### The week
 
 **Sleep day**:
-The 24 hours from 18:00 on one date to 18:00 on the next. It carries the name of the second date, so a night counts for the morning it ends in.
+The time from 18:00 on one date to 18:00 on the next, which is 23 or 25 hours on the day the clock changes. It carries the name of the second date, so a night counts for the morning it ends in.
 _Avoid_: calendar day, 24-hour period
 
 **Week**:
 Seven sleep days, from Monday to Sunday.
 _Avoid_: 7 days, rolling week
+
+**Counted day**:
+A sleep day that has ended and has at least one sleep. The average and "In range" use only counted days.
+_Avoid_: logged day, full day
 
 **Recommended range**:
 The total hours of sleep per sleep day, naps included, that the guidelines recommend for the child's age.
@@ -73,11 +77,11 @@ A sleep day whose total sleep lies inside the child's recommended range. Otherwi
 _Avoid_: on target, OK day
 
 **Usual bedtime**:
-The middle start time of the child's recent nights.
+The middle start time of a set of the child's nights: the nights of the shown week on the charts, or of the last 7 days for a nudge.
 _Avoid_: average bedtime, typical bedtime
 
 **Usual wake-up time**:
-The middle end time of the child's nights in the week.
+The middle end time of the child's ended nights in the shown week.
 _Avoid_: average wake time
 
 **Bedtime window**:
@@ -95,11 +99,15 @@ _Avoid_: alert, reminder, push
 ### Screens
 
 **Sky**:
-The background of the home screen. It shows day, sunset, night, or sunrise.
+The background of the home screen. It shows day, sunset, night, or sunrise from the sun times of Utrecht, and night while the selected child's night runs.
 _Avoid_: theme, mode, background
 
+**Timeline**:
+The chart "When <name> slept": one row per sleep day of the week, from 18:00 to 18:00, with a bar for each sleep.
+_Avoid_: actogram, sleep graph
+
 **Day sheet**:
-The sheet that slides up when a parent taps a sleep day in a chart, and lists that day's sleeps.
+The sheet that slides up when a parent taps a sleep day on the charts, as a bar or a timeline row. It lists the sleeps that cross into that day, with an edit button for each, and "Add a sleep to this day".
 _Avoid_: day details, popup, modal
 
 **Sleep timer**:

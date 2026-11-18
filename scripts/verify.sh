@@ -1,5 +1,5 @@
 #!/bin/bash
-# Local verify for Nap Time: lint, then build and test Core. Runs on Linux and macOS.
+# Local verify for Nap Time: lint, build and test Core, then test the CI change script. Runs on Linux and macOS.
 # On Linux, it first installs the Swift version in .swift-version when Swift is missing or wrong.
 # Prints the first failed step. Usage: scripts/verify.sh
 set -uo pipefail
@@ -16,14 +16,14 @@ run() {
 }
 
 version="$(tr -d '[:space:]' < .swift-version)"
-swiftly_dir="$HOME/.local/share/swiftly"
+install_dir="$HOME/.local/share/swift/$version"
 
 # Swift is at the right version when it prints "Swift version <v>", with no more digits or dots
 # after <v>, and cloud-setup.sh has written its done marker for <v>.
 swift_is_right() {
   local out
   out="$(swift --version 2>&1)" || return 1
-  [ -f "$swiftly_dir/.done-$version" ] \
+  [ -f "$install_dir/.done" ] \
     && grep -Eq "Swift version ${version//./\\.}([^0-9.]|$)" <<< "$out"
 }
 
@@ -38,7 +38,7 @@ check_swift() {
 if [ "$(uname -s)" = "Linux" ]; then
   if ! swift_is_right; then
     run "Install Swift" bash scripts/cloud-setup.sh
-    export PATH="$swiftly_dir/bin:$PATH"
+    export PATH="$install_dir/usr/bin:$PATH"
   fi
   run "Swift version" check_swift
 else
@@ -47,4 +47,5 @@ fi
 run "Lint" swift format lint --strict --recursive .
 run "Build Core" swift build --package-path Packages/Core
 run "Test Core" swift test --package-path Packages/Core
+run "Test the change script" env PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts -p 'test_*.py'
 echo "verify: PASS"

@@ -1,11 +1,11 @@
 import Core
-import CoreData
-import NapTimeStore
-import OSLog
 import SwiftUI
+import UIKit
 
 @main
 struct NapTimeApp: App {
+  /// Gives the scenes the scene delegate that receives opened invites.
+  @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
   private let mode: AppMode
 
   init() {
@@ -15,35 +15,23 @@ struct NapTimeApp: App {
       // A bad launch argument would give wrong screenshots, so stop with the reason.
       fatalError(error.description)
     }
+    // Test mode turns off animations: UIKit ones (sheets, pickers, the keyboard) here,
+    // and SwiftUI ones with the transaction below. Normal mode keeps them.
+    if !mode.areAnimationsEnabled {
+      UIView.setAnimationsEnabled(false)
+    }
   }
 
   var body: some Scene {
     WindowGroup {
+      let animationsEnabled = mode.areAnimationsEnabled
       RootView(mode: mode)
-    }
-  }
-}
-
-private struct RootView: View {
-  let mode: AppMode
-  @State private var store: NSPersistentCloudKitContainer?
-
-  private static let logger = Logger(subsystem: "nl.clearblocks.naptime", category: "FamilyStore")
-
-  var body: some View {
-    HomeView()
-      .task { await loadStore() }
-  }
-
-  /// Loads the family store in the background. On failure, logs the error and keeps the home screen.
-  private func loadStore() async {
-    do {
-      let groupURL = FileManager.default.containerURL(
-        forSecurityApplicationGroupIdentifier: FamilyStore.appGroupIdentifier)
-      let description = try FamilyStore.storeDescription(for: mode, appGroupContainerURL: groupURL)
-      store = try await FamilyStore.load(description)
-    } catch {
-      Self.logger.error("The family store did not load: \(String(describing: error), privacy: .public)")
+        .transaction { transaction in
+          if !animationsEnabled {
+            transaction.disablesAnimations = true
+            transaction.animation = nil
+          }
+        }
     }
   }
 }

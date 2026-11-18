@@ -25,8 +25,8 @@ Every code change goes through craft. Start with `craft:spec` for a single ticke
 On Linux (the cloud agents) and on macOS:
 
 ```bash
-scripts/verify.sh                    # on Linux, installs Swift from .swift-version if needed; then lint, build and test Core
-bash scripts/cloud-setup.sh          # installs Swift from .swift-version on Linux; runs from any folder; verify.sh runs it for you
+scripts/verify.sh                    # on Linux, installs Swift from .swift-version if needed; then lint, build and test Core, and test the CI change script
+bash scripts/cloud-setup.sh          # installs Swift from .swift-version on Ubuntu 24.04 and checks its signature; runs from any folder; verify.sh runs it for you
 swift format lint --strict --recursive .
 swift format -i --recursive <paths>  # fix the format
 swift build --package-path Packages/Core
@@ -47,4 +47,4 @@ xcodebuild test -project NapTime.xcodeproj -scheme NapTime \
 
 In CI, the workflow `CI` (`.github/workflows/ci.yml`) runs the checks `Core (Linux)`, `App (iOS)`, and `Screenshots`. A cloud agent proves CI with the `verify` skill and screens with the `drive-app` skill.
 
-Test mode: launch the app with `--test-mode`, and optionally `--now <ISO 8601 date with a UTC offset>` and `--location <lat>,<lon>`. Core's `LaunchArguments` parses them.
+Test mode: launch the app with `--test-mode`, and optionally `--now <ISO 8601 date with a UTC offset>` and `--seed <name>`. Core's `LaunchArguments` parses them.

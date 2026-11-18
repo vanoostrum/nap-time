@@ -33,7 +33,12 @@ targets:
       properties:
         CFBundleDisplayName: Nap Time
         UILaunchScreen: {}
+        UIAppFonts: [Baloo2-SemiBold.ttf, Baloo2-Bold.ttf, Baloo2-ExtraBold.ttf]
         NSSupportsLiveActivities: true
+        # Opened invite links reach the app (CRAFT-50).
+        CKSharingSupported: true
+        # The partner's changes arrive in the background through CloudKit pushes.
+        UIBackgroundModes: [remote-notification]
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
     entitlements:
       path: App/NapTime.entitlements

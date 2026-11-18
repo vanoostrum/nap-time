@@ -23,15 +23,15 @@ jobs:
       - name: Cache Swift
         uses: actions/cache@v4
         with:
-          path: ~/.local/share/swiftly
-          # -v2: caches from before the done marker of cloud-setup.sh do not count as an install.
-          key: swiftly-${{ runner.os }}-${{ hashFiles('.swift-version') }}-v2
+          path: ~/.local/share/swift
+          # -v3: the install folder moved from swiftly to ~/.local/share/swift/<version> (CRAFT-58).
+          key: swift-${{ runner.os }}-${{ hashFiles('.swift-version') }}-v3
       # The same script that installs Swift when a cloud agent runs scripts/verify.sh.
       - name: Install Swift from .swift-version
         run: |
           bash scripts/cloud-setup.sh
-          echo "$HOME/.local/share/swiftly/bin" >> "$GITHUB_PATH"
-      # swiftly can rewrite .swift-version (CRAFT-42). The install must leave the checkout unchanged.
+          echo "$HOME/.local/share/swift/$(tr -d '[:space:]' < .swift-version)/usr/bin" >> "$GITHUB_PATH"
+      # The install must leave the checkout unchanged (CRAFT-42).
       - name: Check that the Swift install left the checkout clean
         run: |
           changes="$(git status --porcelain)"
@@ -49,6 +49,29 @@ jobs:
         run: swift build --package-path Packages/Core
       - name: Test Core
         run: swift test --package-path Packages/Core
+      # A wrong skip would drop every UI test, so the change script has its own tests (ADR 0003).
+      - name: Test the change script
+        run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts -p 'test_*.py'
+
+  # Decides if the Screenshots job runs: a PR that changes only skip-list paths skips it (ADR 0003).
+  changes:
+    name: Changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      screenshots: ${{ steps.decide.outputs.screenshots }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      # Exits 1 when git cannot give the changed paths. Then Screenshots runs.
+      - name: Decide if the Screenshots job runs
+        id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 scripts/ci_changes.py --event "$EVENT" --base "$BASE" --head "$HEAD" >> "$GITHUB_OUTPUT"
 
   app-ios:
     name: App (iOS)
@@ -78,6 +101,10 @@ jobs:
 
   screenshots:
     name: Screenshots
+    needs: changes
+    # Runs unless Changes said "skip". When Changes fails, its output is empty, so the job runs.
+    # !cancelled(), not always(): a run that a new push cancels does not start this job.
+    if: ${{ !cancelled() && needs.changes.outputs.screenshots != 'skip' }}
     runs-on: macos-26
     timeout-minutes: 45
     permissions:
@@ -93,6 +120,8 @@ jobs:
         run: brew install xcodegen
       - name: Generate the Xcode project
         run: xcodegen generate
+      # The boot comes before the build and does not run beside it: in CRAFT-64 runs, xcodebuild stalled
+      # at its start until a booting simulator was ready, and the boot also slowed brew and the build.
       # A fixed status bar, so home.png is the same on every run (ADR 0003).
       - name: Boot the simulator with a fixed status bar
         run: |
@@ -100,13 +129,22 @@ jobs:
           xcrun simctl bootstatus "$SIMULATOR_ID" -b
           xcrun simctl status_bar "$SIMULATOR_ID" override --time "09:41" --dataNetwork wifi --wifiMode active \
             --wifiBars 3 --cellularMode notSupported --batteryState charged --batteryLevel 100
+      # A generic destination, so xcodebuild does not depend on the simulator. arm64 only, as the simulator.
+      - name: Build for testing
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing -project NapTime.xcodeproj -scheme NapTime \
+            -destination "generic/platform=iOS Simulator" -derivedDataPath build/DerivedData \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO
+      # A failed test runs once more. A test that passes on the retry passes, and gets a warning in the export step.
       - name: Run the UI tests
         id: uitests
         continue-on-error: true
         run: |
           set -o pipefail
-          xcodebuild test -project NapTime.xcodeproj -scheme NapTime \
-            -destination "id=$SIMULATOR_ID" -only-testing:NapTimeUITests \
+          xcodebuild test-without-building -project NapTime.xcodeproj -scheme NapTime \
+            -destination "id=$SIMULATOR_ID" -derivedDataPath build/DerivedData \
+            -only-testing:NapTimeUITests -retry-tests-on-failure -test-iterations 2 \
             -resultBundlePath build/Screenshots.xcresult \
             CODE_SIGNING_ALLOWED=NO
       - name: Export the screenshots
