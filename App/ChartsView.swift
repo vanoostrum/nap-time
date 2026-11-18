@@ -2,22 +2,28 @@ import Core
 import SwiftUI
 
 /// The Charts tab: one week of the selected child, with the header and its arrows, the two stat cards,
-/// and "Hours per day", or the empty state with "Add a sleep" for a week with no sleeps.
+/// "Hours per day", and the timeline "When <name> slept", or the empty state with "Add a sleep" for a week
+/// with no sleeps. A tap on a bar or a timeline row opens the day sheet of that sleep day.
 ///
 /// It opens on `Week.opening`. The week it shows is view state, so it opens there again
-/// each time the tab or the child changes.
+/// each time the tab or the child changes. The day sheet is an overlay, not a presented sheet,
+/// so the sleep form that `RootView` presents shows over it and the sheet stays open behind the form.
 struct ChartsView: View {
   let child: Child
   /// The sleeps of `child`.
   let sleeps: [Sleep]
   let now: Date
   let timeZone: TimeZone
-  /// "Add a sleep" on the empty state, with the start values for the shown week.
+  /// "Add a sleep" on the empty state, or "+ Add a sleep to this day" on the day sheet, with its start values.
   let onAddSleep: (SleepStartValues) -> Void
+  /// A pencil on the day sheet.
+  let onEditSleep: (Sleep) -> Void
   let onTab: (AppTab) -> Void
 
   /// The week the parent moved to, or `nil` for the opening week.
   @State private var movedTo: Week?
+  /// The sleep day whose day sheet is open.
+  @State private var openDay: SleepDay?
 
   private var week: Week { movedTo ?? Week.opening(now: now, in: timeZone) }
   private var reachable: ClosedRange<Week> {
@@ -29,22 +35,33 @@ struct ChartsView: View {
     ZStack {
       Theme.daySkyMid.ignoresSafeArea()
       VStack(spacing: 12) {
-        header
-        statCards(stats)
-        if stats.hasSleep {
-          HoursPerDay(stats: stats)
-        } else {
-          emptyCard
+        ScrollView {
+          VStack(spacing: 12) {
+            header
+            statCards(stats)
+            if stats.hasSleep {
+              HoursPerDay(stats: stats, onTap: openSheet)
+              TimelineCard(
+                name: child.name, rows: Timeline.rows(of: week, sleeps: sleeps, now: now, in: timeZone),
+                onTap: openSheet)
+            } else {
+              emptyCard
+            }
+          }
+          .padding(.top, 4)
         }
-        Spacer(minLength: 0)
+        .scrollBounceBehavior(.basedOnSize)
         TabBar(current: .charts, onSelect: onTab)
       }
       .foregroundStyle(Theme.navy)
       .padding(.horizontal, 20)
-      .padding(.top, 4)
+      if let openDay {
+        daySheet(openDay)
+      }
     }
     .contentShape(Rectangle())
-    .gesture(
+    // Simultaneous, so the week swipe does not block the vertical scroll.
+    .simultaneousGesture(
       DragGesture(minimumDistance: 30).onEnded { drag in
         guard abs(drag.translation.width) > abs(drag.translation.height) else { return }
         move(drag.translation.width < 0 ? 1 : -1)
@@ -52,6 +69,37 @@ struct ChartsView: View {
     )
     .accessibilityElement(children: .contain)
     .accessibilityIdentifier("charts")
+  }
+
+  private func openSheet(_ day: SleepDay) {
+    withAnimation(.easeOut(duration: 0.25)) { openDay = day }
+  }
+
+  private func closeSheet() {
+    withAnimation(.easeOut(duration: 0.25)) { openDay = nil }
+  }
+
+  /// The dimmed charts and the day sheet over them. A tap on the dimmed charts or a swipe down closes it.
+  private func daySheet(_ day: SleepDay) -> some View {
+    ZStack(alignment: .bottom) {
+      Theme.scrim
+        .contentShape(Rectangle())
+        .onTapGesture(perform: closeSheet)
+        .accessibilityElement()
+        .accessibilityLabel("Close")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { closeSheet() }
+        .accessibilityIdentifier("scrim")
+        .transition(.opacity)
+      DaySheetView(
+        sheet: DaySheet(sleepDay: day, sleeps: sleeps, birthDate: child.birthDate, now: now, in: timeZone),
+        onEdit: onEditSleep,
+        onAdd: { onAddSleep(DaySheet.startValues(on: day, now: now, in: timeZone)) },
+        onClose: closeSheet
+      )
+      .transition(.move(edge: .bottom))
+    }
+    .ignoresSafeArea()
   }
 
   private var header: some View {
@@ -148,8 +196,10 @@ private struct StatCard: View {
 }
 
 /// "Hours per day": a bar per sleep day over the range band, on a fixed scale of 0 to 16 hours.
+/// A tap on a bar opens the day sheet of that day.
 private struct HoursPerDay: View {
   let stats: WeekStats
+  let onTap: (SleepDay) -> Void
 
   private static let chartHeight: CGFloat = 150
   private static let pointsPerHour = chartHeight / 16
@@ -189,15 +239,20 @@ private struct HoursPerDay: View {
       let height = min(day.total / 3600, 16) * Self.pointsPerHour
       let shape = UnevenRoundedRectangle(
         topLeadingRadius: 12, bottomLeadingRadius: 4, bottomTrailingRadius: 4, topTrailingRadius: 12)
-      Group {
-        if let judgement = day.judgement {
-          shape.fill(Self.color(judgement))
-        } else {
-          Stripes().clipShape(shape).overlay(shape.strokeBorder(Theme.soFar, lineWidth: 2))
+      Button {
+        onTap(day.sleepDay)
+      } label: {
+        Group {
+          if let judgement = day.judgement {
+            shape.fill(Self.color(judgement))
+          } else {
+            Stripes().clipShape(shape).overlay(shape.strokeBorder(Theme.soFar, lineWidth: 2))
+          }
         }
+        .frame(height: height)
+        .contentShape(shape)
       }
-      .frame(height: height)
-      .accessibilityElement()
+      .buttonStyle(.plain)
       .accessibilityLabel(day.accessibilityLabel)
       .accessibilityValue(Self.value(day.judgement))
       .accessibilityIdentifier("bar")
@@ -225,7 +280,7 @@ private struct HoursPerDay: View {
     }
   }
 
-  private static func color(_ judgement: WeekStats.Judgement) -> Color {
+  static func color(_ judgement: WeekStats.Judgement) -> Color {
     switch judgement {
     case .inRange: Theme.inRange
     case .tooLittle: Theme.tooLittle
@@ -279,6 +334,194 @@ private struct Chevron: Shape {
     path.move(to: point(15, 6))
     path.addLine(to: point(9, 12))
     path.addLine(to: point(15, 18))
+    return path
+  }
+}
+
+/// The timeline "When <name> slept": a row per sleep day on a fixed scale of 24 clock hours from 18:00.
+/// A tap on a row opens the day sheet of that day, also for a day with no sleeps.
+private struct TimelineCard: View {
+  let name: String
+  let rows: [TimelineRow]
+  let onTap: (SleepDay) -> Void
+
+  private static let axis = ["18:00", "00:00", "06:00", "12:00", "18:00"]
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Text("When \(name) slept").font(.baloo(18, .extraBold))
+      ForEach(rows, id: \.sleepDay) { row in
+        Button {
+          onTap(row.sleepDay)
+        } label: {
+          HStack(spacing: 8) {
+            Text(row.dayName).font(.baloo(14, .bold)).frame(width: 32, alignment: .leading)
+            track(row.segments)
+          }
+          .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(row.accessibilityLabel)
+        .accessibilityIdentifier("row")
+      }
+      HStack(spacing: 0) {
+        ForEach(Array(Self.axis.enumerated()), id: \.offset) { index, label in
+          if index > 0 { Spacer(minLength: 0) }
+          Text(label).font(.baloo(12))
+        }
+      }
+      .padding(.leading, 40)
+      .accessibilityHidden(true)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
+    .background(RoundedRectangle(cornerRadius: 30).fill(.white))
+  }
+
+  private func track(_ segments: [TimelineSegment]) -> some View {
+    GeometryReader { geometry in
+      let perHour = geometry.size.width / 24
+      ZStack(alignment: .leading) {
+        RoundedRectangle(cornerRadius: 8).fill(Theme.track)
+        ForEach(segments, id: \.sleepID) { segment in
+          RoundedRectangle(cornerRadius: 8)
+            .fill(segment.kind == .night ? Theme.navy : Theme.nap)
+            .frame(width: max(segment.length * perHour, 2))
+            .offset(x: segment.from * perHour)
+        }
+      }
+    }
+    .frame(height: 16)
+  }
+}
+
+/// The day sheet of one sleep day, from `.sheet` in `design/gallery.css`: the day, its total and pill,
+/// its sleeps with a pencil each, and "+ Add a sleep to this day". A swipe down closes it.
+private struct DaySheetView: View {
+  let sheet: DaySheet
+  let onEdit: (Sleep) -> Void
+  let onAdd: () -> Void
+  let onClose: () -> Void
+
+  @State private var drag: CGFloat = 0
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      Capsule().fill(Theme.handle).frame(width: 48, height: 6).frame(maxWidth: .infinity)
+        .accessibilityHidden(true)
+      HStack(alignment: .top) {
+        VStack(alignment: .leading, spacing: -4) {
+          Text(sheet.title).font(.baloo(28, .extraBold))
+          Text(sheet.summary).font(.baloo(18))
+        }
+        Spacer(minLength: 8)
+        if let pill = sheet.pill {
+          Pill(pill)
+        }
+      }
+      ForEach(sheet.items, id: \.sleep.id) { item in
+        sleepItem(item)
+      }
+      Button("+ Add a sleep to this day", action: onAdd)
+        .buttonStyle(DashedButtonStyle())
+    }
+    .foregroundStyle(Theme.navy)
+    .padding(EdgeInsets(top: 12, leading: 22, bottom: 36, trailing: 22))
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(UnevenRoundedRectangle(topLeadingRadius: 32, topTrailingRadius: 32).fill(.white))
+    .offset(y: max(0, drag))
+    .gesture(
+      DragGesture()
+        .onChanged { drag = $0.translation.height }
+        .onEnded { value in
+          if value.translation.height > 60 || value.predictedEndTranslation.height > 160 {
+            onClose()
+          }
+          withAnimation(.easeOut(duration: 0.2)) { drag = 0 }
+        }
+    )
+    .accessibilityElement(children: .contain)
+    .accessibilityIdentifier("day-sheet")
+  }
+
+  private func sleepItem(_ item: DaySheet.Item) -> some View {
+    HStack(spacing: 12) {
+      Circle().fill(item.sleep.kind == .night ? Theme.navy : Theme.nap).frame(width: 14, height: 14)
+      VStack(alignment: .leading, spacing: -4) {
+        Text(item.kindName).font(.baloo(17, .extraBold))
+        Text(item.times).font(.baloo(20, .bold))
+      }
+      Spacer(minLength: 4)
+      Text(item.duration).font(.baloo(17, .bold))
+      Button {
+        onEdit(item.sleep)
+      } label: {
+        Pencil()
+          .stroke(Theme.navy, style: StrokeStyle(lineWidth: 2.6, lineCap: .round, lineJoin: .round))
+          .frame(width: 24, height: 24)
+          .frame(width: 48, height: 48)
+          .background(Circle().fill(.white))
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel(item.editLabel)
+    }
+    .padding(.horizontal, 14)
+    .padding(.vertical, 12)
+    .background(RoundedRectangle(cornerRadius: 22).fill(Theme.track))
+  }
+}
+
+/// The pill in the sheet head: the verdict in the colour of its bar, or a pale "So far".
+private struct Pill: View {
+  let pill: DaySheet.Pill
+
+  init(_ pill: DaySheet.Pill) { self.pill = pill }
+
+  var body: some View {
+    let (text, fill): (String, Color) =
+      switch pill {
+      case .judgement(.inRange): ("In range", Theme.inRange)
+      case .judgement(.tooLittle): ("Too little", Theme.tooLittle)
+      case .judgement(.tooMuch): ("Too much", Theme.tooMuch)
+      case .soFar: ("So far", .white)
+      }
+    return Text(text)
+      .font(.baloo(15, .extraBold))
+      .foregroundStyle(pill == .soFar ? Theme.navy : .white)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 4)
+      .background(Capsule().fill(fill))
+      .overlay(Capsule().strokeBorder(pill == .soFar ? Theme.soFar : .clear, lineWidth: 2))
+  }
+}
+
+/// "+ Add a sleep to this day": a navy dashed pill, from `.dashed` in `design/gallery.css`.
+private struct DashedButtonStyle: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .font(.baloo(18, .bold))
+      .foregroundStyle(Theme.navy)
+      .frame(maxWidth: .infinity, minHeight: 54)
+      .overlay(Capsule().strokeBorder(Theme.navy, style: StrokeStyle(lineWidth: 3, dash: [9, 6])))
+      .contentShape(Capsule())
+      .opacity(configuration.isPressed ? 0.6 : 1)
+  }
+}
+
+/// The pencil of the edit buttons, in a 24 × 24 box: "M4 20h4L19 9l-4-4L4 16v4z".
+private struct Pencil: Shape {
+  func path(in rect: CGRect) -> Path {
+    let scale = rect.width / 24
+    func point(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+      CGPoint(x: rect.minX + x * scale, y: rect.minY + y * scale)
+    }
+    var path = Path()
+    path.move(to: point(4, 20))
+    path.addLine(to: point(8, 20))
+    path.addLine(to: point(19, 9))
+    path.addLine(to: point(15, 5))
+    path.addLine(to: point(4, 16))
+    path.closeSubpath()
     return path
   }
 }

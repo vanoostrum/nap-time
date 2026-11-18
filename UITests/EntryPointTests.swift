@@ -279,6 +279,10 @@ final class EntryPointTests: XCTestCase {
     XCTAssertTrue(driver.button("Previous week").isEnabled)
     XCTAssertTrue(driver.button("Next week").isEnabled)
     XCTAssertTrue(driver.button("Charts").isSelected)
+    XCTAssertTrue(driver.text("When Mila slept").exists)
+    XCTAssertEqual(driver.rows.count, 7)
+    XCTAssertEqual(driver.rows.element(boundBy: 0).label, "Monday 2 Nov details")
+    XCTAssertEqual(driver.rows.element(boundBy: 6).label, "Sunday 8 Nov details")
     driver.attachScreenshot("charts", to: self)
   }
 
@@ -297,6 +301,10 @@ final class EntryPointTests: XCTestCase {
     XCTAssertTrue(driver.text("so far").exists)
     XCTAssertTrue(driver.button("Previous week").isEnabled)
     XCTAssertFalse(driver.button("Next week").isEnabled)
+    XCTAssertTrue(driver.text("When Mila slept").exists)
+    XCTAssertEqual(
+      (0..<driver.rows.count).map { driver.rows.element(boundBy: $0).label },
+      ["Monday 9 Nov details", "Tuesday 10 Nov details", "Wednesday 11 Nov details"])
     driver.attachScreenshot("charts-today", to: self)
   }
 
@@ -331,5 +339,52 @@ final class EntryPointTests: XCTestCase {
     attachment.name = "live-activity.png"
     attachment.lifetime = .keepAlways
     add(attachment)
+  }
+
+  /// Criterion 3: the sheet of a counted day, from Tuesday's bar.
+  @MainActor
+  func testDaySheet() throws {
+    let driver = AppDriver.launch(seed: "week", now: "2026-11-08T19:30:00+01:00")
+    driver.openCharts()
+    driver.openDaySheet(bar: 1, title: "Tuesday 3 Nov")
+    XCTAssertTrue(driver.text("10 h 12 m slept in total").exists)
+    XCTAssertTrue(driver.text("Too little").exists)
+    XCTAssertTrue(driver.text("20:54 → 06:12").exists)
+    XCTAssertTrue(driver.text("9 h 18 m").exists)
+    XCTAssertTrue(driver.text("13:30 → 14:24").exists)
+    XCTAssertTrue(driver.text("54 m").exists)
+    XCTAssertTrue(driver.button("Edit night").exists)
+    XCTAssertTrue(driver.button("Edit nap").exists)
+    XCTAssertTrue(driver.button("+ Add a sleep to this day").exists)
+    driver.attachScreenshot("day-sheet", to: self)
+  }
+
+  /// Criterion 4: the sheet of the current day, from Wednesday's striped bar.
+  @MainActor
+  func testDaySheetToday() throws {
+    let driver = AppDriver.launch(seed: "week-today", now: "2026-11-11T10:00:00+01:00")
+    driver.openCharts()
+    driver.openDaySheet(bar: 2, title: "Wednesday 11 Nov")
+    XCTAssertTrue(driver.text("10 h 50 m slept so far").exists)
+    XCTAssertTrue(driver.text("So far").exists)
+    XCTAssertTrue(driver.text("19:50 → 06:40").exists)
+    XCTAssertTrue(driver.button("+ Add a sleep to this day").exists)
+    driver.attachScreenshot("day-sheet-today", to: self)
+  }
+
+  /// Criterion 5: the sheet of a past day with no sleeps, from Noah's Monday row.
+  @MainActor
+  func testDaySheetEmpty() throws {
+    let driver = AppDriver.launch(seed: "week", now: "2026-11-08T19:30:00+01:00")
+    driver.button("Noah").tap()
+    driver.waitFor(driver.text("Noah is awake"))
+    driver.openCharts()
+    driver.waitFor(driver.text("When Noah slept"))
+    XCTAssertEqual(driver.rows.count, 7)
+    driver.openDaySheet(row: "Monday 2 Nov details", title: "Monday 2 Nov")
+    XCTAssertTrue(driver.text("No sleeps logged").exists)
+    XCTAssertFalse(driver.text("So far").exists)
+    XCTAssertTrue(driver.button("+ Add a sleep to this day").exists)
+    driver.attachScreenshot("day-sheet-empty", to: self)
   }
 }

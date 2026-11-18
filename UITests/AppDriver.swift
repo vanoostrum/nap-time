@@ -145,6 +145,40 @@ struct AppDriver {
     (0..<bars.count).map { (bars.element(boundBy: $0).value as? String) ?? "" }
   }
 
+  /// The rows of the timeline "When <name> slept", Monday first. Each label is "<weekday> <day> <month> details".
+  var rows: XCUIElementQuery { app.descendants(matching: .any).matching(identifier: "row") }
+
+  /// The open day sheet.
+  var daySheet: XCUIElement { app.descendants(matching: .any)["day-sheet"] }
+
+  /// Taps a timeline row, such as "Tuesday 3 Nov details", and waits for the day sheet with that day's title.
+  func openDaySheet(row label: String, title: String, file: StaticString = #filePath, line: UInt = #line) {
+    let row = rows.matching(NSPredicate(format: "label == %@", label)).firstMatch
+    waitFor(row, file: file, line: line)
+    row.tap()
+    waitFor(daySheet, file: file, line: line)
+    waitFor(text(title), file: file, line: line)
+  }
+
+  /// Taps a bar of "Hours per day", Monday first, and waits for the day sheet with that day's title.
+  func openDaySheet(bar index: Int, title: String, file: StaticString = #filePath, line: UInt = #line) {
+    let bar = bars.element(boundBy: index)
+    waitFor(bar, file: file, line: line)
+    bar.tap()
+    waitFor(daySheet, file: file, line: line)
+    waitFor(text(title), file: file, line: line)
+  }
+
+  /// Waits until the day sheet has closed.
+  func waitForDaySheetToClose(file: StaticString = #filePath, line: UInt = #line) {
+    XCTAssertTrue(daySheet.waitForNonExistence(timeout: 10), "The day sheet is still open", file: file, line: line)
+  }
+
+  /// Taps the dimmed charts above the day sheet.
+  func tapDimmedCharts() {
+    app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
+  }
+
   func attachScreenshot(_ entryPoint: String, to testCase: XCTestCase) {
     let attachment = XCTAttachment(
       data: app.screenshot().pngRepresentation, uniformTypeIdentifier: "public.png")
