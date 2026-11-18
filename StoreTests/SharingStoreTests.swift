@@ -44,8 +44,8 @@ import Testing
     try store.startSleep(childID: mila.id, at: date("2026-06-21T09:00:00+02:00"), kind: .nap)
     try store.startSleep(childID: lou.id, at: date("2026-06-21T09:00:00+02:00"), kind: .nap)
 
-    let milas = try #require(store.sleeps(of: mila.id).first(where: \.isRunning))
-    let lous = try #require(store.sleeps(of: lou.id).first(where: \.isRunning))
+    let milas = try #require(running(of: mila, in: store))
+    let lous = try #require(running(of: lou, in: store))
     #expect(!store.isOnlyOnThisPhone(sleepID: milas.id))
     #expect(store.isOnlyOnThisPhone(sleepID: lous.id))
   }
@@ -79,7 +79,7 @@ import Testing
     try store.startSleep(childID: mila.id, at: date("2026-06-21T09:00:00+02:00"), kind: .nap)
 
     #expect(store.onlyOnThisPhone.isEmpty)
-    let running = try #require(store.sleeps(of: mila.id).first(where: \.isRunning))
+    let running = try #require(running(of: mila, in: store))
     #expect(!store.isOnlyOnThisPhone(sleepID: running.id))
     #expect(store.children.map(\.name) == ["Mila", "Noah"])
   }
@@ -137,7 +137,7 @@ import Testing
     let mila = try named("Mila", in: store)
 
     try store.startSleep(childID: mila.id, at: date("2026-06-21T09:00:00+02:00"), kind: .nap)
-    let sleep = try #require(store.sleeps(of: mila.id).first(where: \.isRunning))
+    let sleep = try #require(running(of: mila, in: store))
     await store.processStoreChange()
 
     #expect(seam.attempts == 2)
@@ -180,8 +180,13 @@ import Testing
       .test(environment), appGroupContainerURL: nil, seedPhoto: { _ in nil }, shareMoving: shareMoving)
   }
 
+  @MainActor private func running(of child: Child, in store: FamilyStore) -> Sleep? {
+    store.sleeps(of: child.id).first(where: \.isRunning)
+  }
+
   @MainActor private func named(_ name: String, in store: FamilyStore) throws -> Child {
-    try #require(store.children.first { $0.name == name })
+    let child = store.children.first { $0.name == name }
+    return try #require(child)
   }
 
   private func date(_ iso: String) -> Date {

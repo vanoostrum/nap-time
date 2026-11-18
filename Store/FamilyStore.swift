@@ -504,9 +504,11 @@ public final class FamilyStore {
   private func add(_ seed: Seed, photo: (SeedChild) -> Data?) async throws {
     let start = Date(timeIntervalSince1970: 0)
     var objects: [NSManagedObject] = []
+    var stores: [NSPersistentStore] = []
     for (index, child) in seed.children.enumerated() {
       let stored = try await Self.prepared(photo(child))
       let store = sharing.isJoined && !child.onlyOnThisPhone ? sharedStore : privateStore
+      stores.append(store)
       objects.append(
         try insertChild(
           id: UUID(), name: child.name, birthDate: child.birthDate, photo: stored,
@@ -515,7 +517,9 @@ public final class FamilyStore {
     var ids = objects.compactMap { $0.value(forKey: Key.identifier) as? UUID }
     for sleep in seed.sleeps {
       let id = UUID()
-      try insertSleep(id: id, child: objects[sleep.childIndex], start: sleep.start, end: sleep.end, kind: sleep.kind)
+      try insertSleep(
+        id: id, child: objects[sleep.childIndex], in: stores[sleep.childIndex], start: sleep.start, end: sleep.end,
+        kind: sleep.kind)
       ids.append(id)
     }
     if context.hasChanges { try context.save() }
@@ -576,20 +580,18 @@ public final class FamilyStore {
     return object
   }
 
-  /// Inserts a sleep into the store of its child: a relationship cannot cross stores.
-  private func insertSleep(id: UUID, child: NSManagedObject, start: Date, end: Date?, kind: SleepKind) throws {
+  /// Inserts a sleep into the store of its child: a relationship cannot cross stores. `store` is the store of an
+  /// unsaved child; a saved child gives its own store.
+  private func insertSleep(
+    id: UUID, child: NSManagedObject, in store: NSPersistentStore? = nil, start: Date, end: Date?, kind: SleepKind
+  ) throws {
     let object = NSManagedObject(entity: try entity(SleepKey.entity), insertInto: context)
-    context.assign(object, to: store(of: child))
+    context.assign(object, to: store ?? child.objectID.persistentStore ?? privateStore)
     object.setValue(id, forKey: Key.identifier)
     object.setValue(start, forKey: SleepKey.start)
     object.setValue(end, forKey: SleepKey.end)
     object.setValue(kind.rawValue, forKey: SleepKey.kind)
     object.setValue(child, forKey: SleepKey.child)
-  }
-
-  /// The store that holds a saved object, or for a new child the store it was assigned to.
-  private func store(of object: NSManagedObject) -> NSPersistentStore {
-    object.objectID.persistentStore ?? privateStore
   }
 
   private func fetchObjects(_ entity: String, in store: NSPersistentStore) throws -> [NSManagedObject] {
