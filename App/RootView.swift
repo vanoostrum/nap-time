@@ -208,29 +208,15 @@ struct RootView: View {
     }
   }
 
-  /// Loads the family store. In test mode it adds the children and the sleeps of the seed first.
+  /// Loads the family store. In test mode the store adds the children and the sleeps of the seed first.
   /// On failure, it logs the error and keeps the home screen with the sky.
   private func loadStore() async {
     do {
       let groupURL = FileManager.default.containerURL(
         forSecurityApplicationGroupIdentifier: FamilyStore.appGroupIdentifier)
-      let description = try FamilyStore.storeDescription(for: mode, appGroupContainerURL: groupURL)
-      let fixedNow = fixedNow
-      let store = try await FamilyStore.load(description, now: { fixedNow ?? Date() })
-      if case .test(let environment) = mode {
-        var ids: [Child.ID] = []
-        for child in environment.seed.children {
-          let photo = child.drawsPhoto ? SeedPhoto.pngData() : nil
-          ids.append(try await store.add(name: child.name, birthDate: child.birthDate, photo: photo).id)
-        }
-        for sleep in environment.seed.sleeps {
-          try store.startSleep(childID: ids[sleep.childIndex], at: sleep.start, kind: sleep.kind)
-          if let end = sleep.end {
-            try store.endSleep(childID: ids[sleep.childIndex], at: end)
-          }
-        }
-        selectedID = environment.seed.selectedIndex.map { ids[$0] }
-      } else {
+      let store = try await FamilyStore.load(
+        mode, appGroupContainerURL: groupURL, seedPhoto: { $0.drawsPhoto ? SeedPhoto.pngData() : nil })
+      if mode == .normal {
         selectedID = UserDefaults.standard.string(forKey: Self.selectedChildKey).flatMap(UUID.init(uuidString:))
       }
       phase = .ready(store)
