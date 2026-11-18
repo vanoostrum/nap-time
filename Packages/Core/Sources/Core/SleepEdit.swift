@@ -77,6 +77,23 @@ public struct SleepStartValues: Hashable, Sendable {
     return SleepStartValues(
       fellAsleep: fellAsleep, wokeUp: wokeUp, kind: SleepKind.guess(start: fellAsleep, in: timeZone))
   }
+
+  /// For another sleep day, so the whole sleep lies inside `sleepDay`: "Woke up" at the clock time of `now`
+  /// rounded down to 5 minutes, on the evening before from 19:00 to 23:59 and on the named date otherwise,
+  /// and "Fell asleep" 1 hour before. When "Woke up" would pass 18:00 on the named date, it is 17:00 to 18:00.
+  public static func on(_ sleepDay: SleepDay, now: Date, in timeZone: TimeZone) -> SleepStartValues {
+    let calendar = Calendar.gregorian(in: timeZone)
+    let clock = calendar.dateComponents([.hour, .minute], from: now)
+    let hour = clock.hour ?? 0
+    let date = hour >= 19 ? sleepDay.name.adding(days: -1) : sleepDay.name
+    let parts = DateComponents(
+      year: date.year, month: date.month, day: date.day, hour: hour, minute: (clock.minute ?? 0) / 5 * 5)
+    let end = sleepDay.interval(in: timeZone).end
+    let wokeUp = min(calendar.date(from: parts) ?? end, end)
+    let fellAsleep = wokeUp.addingTimeInterval(-3600)
+    return SleepStartValues(
+      fellAsleep: fellAsleep, wokeUp: wokeUp, kind: SleepKind.guess(start: fellAsleep, in: timeZone))
+  }
 }
 
 /// A time on the sleep form.

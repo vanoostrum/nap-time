@@ -138,6 +138,30 @@ struct AppDriver {
       line: line)
   }
 
+  /// Taps the Charts tab and waits for the Charts screen.
+  func openCharts() {
+    let tab = button("Charts")
+    waitFor(tab)
+    tab.tap()
+    waitFor(app.descendants(matching: .any)["charts"])
+  }
+
+  /// Taps the Today tab and waits for the home screen.
+  func openToday() {
+    let tab = button("Today")
+    waitFor(tab)
+    tab.tap()
+    waitFor(app.descendants(matching: .any)["home"])
+  }
+
+  /// The bars of "Hours per day", Monday first. Each label is "<weekday> <day> <month>, <duration>".
+  var bars: XCUIElementQuery { app.descendants(matching: .any).matching(identifier: "bar") }
+
+  /// The value of each bar: "in range", "too little", "too much", or "so far".
+  var barValues: [String] {
+    (0..<bars.count).map { (bars.element(boundBy: $0).value as? String) ?? "" }
+  }
+
   func attachScreenshot(_ entryPoint: String, to testCase: XCTestCase) {
     let attachment = XCTAttachment(
       data: app.screenshot().pngRepresentation, uniformTypeIdentifier: "public.png")

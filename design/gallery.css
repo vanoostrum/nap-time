@@ -55,6 +55,7 @@
   --too-little: #c8402a;
   --too-much: #6a4bd8;
   --range-band: #d6f3e6;
+  --so-far: #a9c7e8;
   --track: #eaf5ff;
   --nap: #ff9f68;
   --scrim: rgba(10, 25, 50, 0.45);
@@ -391,12 +392,15 @@ button, input, select { font-family: inherit; }
 }
 .bar.little { background: var(--too-little); }
 .bar.much { background: var(--too-much); }
+/* Today's sleep day, still running until 18:00: pale, with no in-range colour. */
+.bar.so-far { background: repeating-linear-gradient(135deg, var(--so-far) 0 6px, var(--white) 6px 10px); border: 2px solid var(--so-far); }
 .days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; font-size: 14px; font-weight: 700; text-align: center; }
 .legend { display: flex; gap: 14px; font-size: 13px; }
 .legend span { display: flex; align-items: center; gap: 5px; }
 .legend i { width: 12px; height: 12px; border-radius: 4px; background: var(--in-range); }
 .legend i.little { background: var(--too-little); }
 .legend i.much { background: var(--too-much); }
+.legend i.so-far { background: var(--white); border: 2px solid var(--so-far); }
 
 /* Timeline: one row per day from 18:00 to 18:00. --from and --len are in hours after 18:00. */
 .row { display: flex; align-items: center; gap: 8px; border: 0; padding: 0; background: transparent; color: var(--navy); width: 100%; }
