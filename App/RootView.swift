@@ -90,6 +90,7 @@ struct RootView: View {
             ChartsView(
               child: child, sleeps: store.sleeps(of: child.id), now: now, timeZone: calendar.timeZone,
               onAddSleep: { cover = .sleep(.new($0, childID: child.id)) },
+              onEditSleep: { cover = .sleep($0.isRunning ? .runningStart($0) : .edit($0)) },
               onTab: { tab = $0 }
             )
             // A new child opens Charts on the opening week again.
