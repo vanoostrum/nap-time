@@ -1,5 +1,6 @@
 import Core
 import SwiftUI
+import UIKit
 
 /// The Charts tab: one week of the selected child, with the header and its arrows, the two stat cards,
 /// "Hours per day", and the timeline "When <name> slept", or the empty state with "Add a sleep" for a week
@@ -352,7 +353,7 @@ private struct TimelineCard: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text("When \(name) slept").font(.baloo(18, .extraBold)).cssLineHeight(19)
+      Text("When \(name) slept").balooLine(18, .extraBold, lineHeight: 19)
       ForEach(rows, id: \.sleepDay) { row in
         Button {
           onTap(row.sleepDay)
@@ -370,10 +371,10 @@ private struct TimelineCard: View {
       HStack(spacing: 0) {
         ForEach(Array(Self.axis.enumerated()), id: \.offset) { index, label in
           if index > 0 { Spacer(minLength: 0) }
-          Text(label).font(.baloo(12))
+          Text(label)
         }
       }
-      .cssLineHeight(15)
+      .balooLine(12, lineHeight: 15)
       .padding(.leading, 40)
       .accessibilityHidden(true)
     }
@@ -415,8 +416,8 @@ private struct DaySheetView: View {
         .accessibilityHidden(true)
       HStack(alignment: .top) {
         VStack(alignment: .leading, spacing: 0) {
-          Text(sheet.title).font(.baloo(28, .extraBold)).cssLineHeight(31)
-          Text(sheet.summary).font(.baloo(18)).cssLineHeight(20)
+          Text(sheet.title).balooLine(28, .extraBold, lineHeight: 31)
+          Text(sheet.summary).balooLine(18, lineHeight: 20)
         }
         Spacer(minLength: 8)
         if let pill = sheet.pill {
@@ -452,8 +453,8 @@ private struct DaySheetView: View {
     HStack(spacing: 12) {
       Circle().fill(item.sleep.kind == .night ? Theme.navy : Theme.nap).frame(width: 14, height: 14)
       VStack(alignment: .leading, spacing: 0) {
-        Text(item.kindName).font(.baloo(17, .extraBold)).cssLineHeight(20)
-        times(item.times).font(.baloo(20, .bold)).cssLineHeight(23)
+        Text(item.kindName).balooLine(17, .extraBold, lineHeight: 20)
+        times(item.times).balooLine(20, .bold, lineHeight: 23)
       }
       Spacer(minLength: 4)
       Text(item.duration).font(.baloo(17, .bold))
@@ -476,10 +477,13 @@ private struct DaySheetView: View {
 }
 
 extension View {
-  /// Lays out a line of text as tall as CSS `line-height` makes it in the gallery. Baloo 2's own line height
-  /// is much taller, so without this the cards and the day sheet grow taller than their gallery pages.
-  fileprivate func cssLineHeight(_ height: CGFloat) -> some View {
-    frame(height: height, alignment: .leading)
+  /// Sets Baloo 2 and trims its extra leading, so one line at the default text size is as tall as CSS
+  /// `line-height` makes it in the gallery. Baloo 2's own line height is much taller, so without this the cards
+  /// and the day sheet grow taller than their gallery pages. Only the empty space above and below the glyphs
+  /// is trimmed, by a fixed amount: long text still wraps, and larger Dynamic Type sizes still grow.
+  fileprivate func balooLine(_ size: CGFloat, _ weight: Baloo = .semiBold, lineHeight: CGFloat) -> some View {
+    let natural = UIFont(name: weight.rawValue, size: size)?.lineHeight ?? lineHeight
+    return font(.baloo(size, weight)).padding(.vertical, min(0, (lineHeight - natural) / 2))
   }
 }
 
