@@ -85,11 +85,11 @@ The middle end time of the child's ended nights in the shown week.
 _Avoid_: average wake time
 
 **Bedtime window**:
-A 30-minute span of bedtimes that the app suggests, from the usual wake-up time, the naps, and the recommended range.
+A 30-minute span of bedtimes that the app suggests: the usual wake-up time minus the night the child needs, which is the middle of the recommended range minus the child's naps.
 _Avoid_: ideal bedtime, bedtime target
 
 **What to try**:
-The card on the charts screen with one tip from the child's own week, a few general tips, and a note to ask a doctor.
+The card on the charts screen with one tip from the child's shown week, a few general tips, and a note to ask a doctor. It needs 4 counted days in the week; before that, it asks the parent to keep logging.
 _Avoid_: advice, insight, recommendation
 
 **Nudge**:
