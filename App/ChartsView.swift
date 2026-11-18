@@ -48,8 +48,8 @@ struct ChartsView: View {
               emptyCard
             }
           }
-          // The header starts 54 points from the top of the screen, as `.screen.plain` in the gallery.
-          .padding(.top, 54)
+          // The arrows start 56 points from the top of the screen, as `.screen.plain` in the gallery.
+          .padding(.top, 48)
         }
         .scrollBounceBehavior(.basedOnSize)
         .scrollIndicators(.hidden)
@@ -352,7 +352,7 @@ private struct TimelineCard: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text("When \(name) slept").font(.baloo(18, .extraBold))
+      Text("When \(name) slept").font(.baloo(18, .extraBold)).cssLineHeight(19)
       ForEach(rows, id: \.sleepDay) { row in
         Button {
           onTap(row.sleepDay)
@@ -373,6 +373,7 @@ private struct TimelineCard: View {
           Text(label).font(.baloo(12))
         }
       }
+      .cssLineHeight(15)
       .padding(.leading, 40)
       .accessibilityHidden(true)
     }
@@ -413,9 +414,9 @@ private struct DaySheetView: View {
       Capsule().fill(Theme.handle).frame(width: 48, height: 6).frame(maxWidth: .infinity)
         .accessibilityHidden(true)
       HStack(alignment: .top) {
-        VStack(alignment: .leading, spacing: -4) {
-          Text(sheet.title).font(.baloo(28, .extraBold))
-          Text(sheet.summary).font(.baloo(18))
+        VStack(alignment: .leading, spacing: 0) {
+          Text(sheet.title).font(.baloo(28, .extraBold)).cssLineHeight(31)
+          Text(sheet.summary).font(.baloo(18)).cssLineHeight(20)
         }
         Spacer(minLength: 8)
         if let pill = sheet.pill {
@@ -450,9 +451,9 @@ private struct DaySheetView: View {
   private func sleepItem(_ item: DaySheet.Item) -> some View {
     HStack(spacing: 12) {
       Circle().fill(item.sleep.kind == .night ? Theme.navy : Theme.nap).frame(width: 14, height: 14)
-      VStack(alignment: .leading, spacing: -4) {
-        Text(item.kindName).font(.baloo(17, .extraBold))
-        Text(item.times).font(.baloo(20, .bold))
+      VStack(alignment: .leading, spacing: 0) {
+        Text(item.kindName).font(.baloo(17, .extraBold)).cssLineHeight(20)
+        times(item.times).font(.baloo(20, .bold)).cssLineHeight(23)
       }
       Spacer(minLength: 4)
       Text(item.duration).font(.baloo(17, .bold))
@@ -472,6 +473,22 @@ private struct DaySheetView: View {
     .padding(.vertical, 12)
     .background(RoundedRectangle(cornerRadius: 22).fill(Theme.track))
   }
+}
+
+extension View {
+  /// Lays out a line of text as tall as CSS `line-height` makes it in the gallery. Baloo 2's own line height
+  /// is much taller, so without this the cards and the day sheet grow taller than their gallery pages.
+  fileprivate func cssLineHeight(_ height: CGFloat) -> some View {
+    frame(height: height, alignment: .leading)
+  }
+}
+
+/// "20:54 → 06:12" with a bold arrow: Baloo 2 has no "→", and the fallback glyph is thin.
+private func times(_ text: String) -> Text {
+  let parts = text.components(separatedBy: " → ")
+  guard parts.count == 2 else { return Text(text) }
+  let arrow = Text("→").font(.system(size: 18, weight: .black))
+  return Text("\(parts[0]) \(arrow) \(parts[1])")
 }
 
 /// The pill in the sheet head: the verdict in the colour of its bar, or a pale "So far".
