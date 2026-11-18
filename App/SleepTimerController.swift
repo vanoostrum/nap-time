@@ -86,23 +86,21 @@ final class SleepTimerController {
   private func apply(_ change: SleepTimerChange, to timers: [Activity<SleepTimerAttributes>], isForeground: Bool) {
     switch change {
     case .update(let id, let sleepID, let start, let kind):
-      guard let activity = timers.first(where: { $0.id == id }) else { return }
-      update(activity, to: .init(sleepID: sleepID, start: start, kind: kind))
+      update(id, to: .init(sleepID: sleepID, start: start, kind: kind))
     case .end(let id):
-      guard let activity = timers.first(where: { $0.id == id }) else { return }
-      end(activity)
+      end(id)
     case .replace(let id, let sleepID, let start, let kind, let showsFrom):
       guard let activity = timers.first(where: { $0.id == id }) else { return }
       let state = SleepTimerAttributes.ContentState(sleepID: sleepID, start: start, kind: kind)
       // iOS lets an app request a Live Activity only in the foreground. In the background, update the timer now,
       // and the reconcile when the app becomes active replaces it.
       guard isForeground else {
-        update(activity, to: state)
+        update(id, to: state)
         return
       }
       var attributes = activity.attributes
       attributes.showsFrom = showsFrom
-      end(activity)
+      end(id)
       request(attributes, state: state)
     }
   }
@@ -129,12 +127,25 @@ final class SleepTimerController {
   }
 
   /// An update passes no alert configuration, so it is silent.
-  private func update(_ activity: Activity<SleepTimerAttributes>, to state: SleepTimerAttributes.ContentState) {
-    Task { await activity.update(ActivityContent(state: state, staleDate: nil)) }
+  private func update(_ id: String, to state: SleepTimerAttributes.ContentState) {
+    Task { await Self.update(id, to: state) }
   }
 
-  private func end(_ activity: Activity<SleepTimerAttributes>) {
-    Task { await activity.end(nil, dismissalPolicy: .immediate) }
+  private func end(_ id: String) {
+    Task { await Self.end(id) }
+  }
+
+  // `Activity` is not Sendable, so these find it by id where they use it.
+  private nonisolated static func update(_ id: String, to state: SleepTimerAttributes.ContentState) async {
+    for activity in Activity<SleepTimerAttributes>.activities where activity.id == id {
+      await activity.update(ActivityContent(state: state, staleDate: nil))
+    }
+  }
+
+  private nonisolated static func end(_ id: String) async {
+    for activity in Activity<SleepTimerAttributes>.activities where activity.id == id {
+      await activity.end(nil, dismissalPolicy: .immediate)
+    }
   }
 
   /// The timers that are pending or showing. A card that the parent swiped away is `.dismissed`, so it never comes

@@ -49,9 +49,14 @@ struct EndSleepIntent: LiveActivityIntent {
     UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [nudge])
     Self.logger.info("Awake removed the pending notification request \(nudge, privacy: .public)")
     // 4: close the card at once. Another timer of the child stays for the next reconcile.
+    await Self.endTimers(of: sleepID)
+    return .result()
+  }
+
+  /// `Activity` is not Sendable, so the timers are found and ended outside the main actor.
+  private nonisolated static func endTimers(of sleepID: UUID) async {
     for activity in Activity<SleepTimerAttributes>.activities where activity.content.state.sleepID == sleepID {
       await activity.end(nil, dismissalPolicy: .immediate)
     }
-    return .result()
   }
 }
