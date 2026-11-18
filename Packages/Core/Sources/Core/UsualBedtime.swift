@@ -61,12 +61,26 @@ public struct UsualBedtime: Equatable, Sendable {
     return "bed \(text(bedtime)) · up \(text(wakeUp))"
   }
 
+  /// How much the bedtimes of `nights` move around: the average distance of each start time from their mean,
+  /// measured from 12:00 like the usual bedtime. `nil` with fewer than 2 nights.
+  public static func spread(of nights: [Sleep], in timeZone: TimeZone) -> TimeInterval? {
+    let offsets = offsets(nights.map(\.start), from: 12, in: timeZone)
+    guard offsets.count >= 2 else { return nil }
+    let mean = offsets.reduce(0, +) / Double(offsets.count)
+    return offsets.reduce(0) { $0 + abs($1 - mean) } / Double(offsets.count)
+  }
+
   private static func median(_ instants: [Date], from hour: Int, in timeZone: TimeZone) -> TimeOfDay? {
-    let origin = TimeInterval(hour * 3600)
-    let offsets = instants.map { TimeOfDay(seconds: TimeOfDay($0, in: timeZone).seconds - origin).seconds }.sorted()
+    let offsets = offsets(instants, from: hour, in: timeZone).sorted()
     guard !offsets.isEmpty else { return nil }
     let middle = offsets.count / 2
     let median = offsets.count % 2 == 1 ? offsets[middle] : (offsets[middle - 1] + offsets[middle]) / 2
-    return TimeOfDay(seconds: median + origin)
+    return TimeOfDay(seconds: median + TimeInterval(hour * 3600))
+  }
+
+  /// The clock time of each instant as the time since `hour`: from 0 to less than 24 hours.
+  private static func offsets(_ instants: [Date], from hour: Int, in timeZone: TimeZone) -> [TimeInterval] {
+    let origin = TimeInterval(hour * 3600)
+    return instants.map { TimeOfDay(seconds: TimeOfDay($0, in: timeZone).seconds - origin).seconds }
   }
 }
