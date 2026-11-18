@@ -53,6 +53,8 @@ struct SettingsView: View {
         .padding(.bottom, 24)
       }
       .scrollBounceBehavior(.basedOnSize)
+      // A child's form covers Settings: VoiceOver and the UI tests see only the form, with its own "Done".
+      .accessibilityHidden(cover != nil)
     }
     .fullScreenCover(item: $cover) { cover in
       coverView(cover)
@@ -173,7 +175,8 @@ struct SettingsView: View {
         .balooLine(21, .bold, lineHeight: 25)
         .accessibilityIdentifier("share-title")
       Text(store.sharing.settingsText)
-        .balooLine(15, lineHeight: 17)
+        .font(.baloo(15))
+        .lineHeight(.multiple(factor: 1.15))
         .opacity(0.8)
         .fixedSize(horizontal: false, vertical: true)
         .accessibilityIdentifier("share-text")

@@ -23,7 +23,8 @@ struct JoinView: View {
           picture
             .padding(.bottom, 8)
           Text(screen.title)
-            .balooLine(40, .extraBold, lineHeight: 42)
+            .font(.baloo(40, .extraBold))
+            .lineHeight(.multiple(factor: 1.05))
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityAddTraits(.isHeader)
