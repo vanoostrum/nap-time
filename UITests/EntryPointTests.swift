@@ -324,6 +324,7 @@ final class EntryPointTests: XCTestCase {
     XCTAssertTrue(driver.text("Log Noah's sleeps on the Today tab, or add one from earlier.").exists)
     XCTAssertTrue(driver.button("Add a sleep").exists)
     XCTAssertEqual(driver.bars.count, 0)
+    XCTAssertFalse(driver.whatToTry.exists)
     XCTAssertTrue(driver.button("Previous week").isEnabled)
     XCTAssertFalse(driver.button("Next week").isEnabled)
     driver.attachScreenshot("charts-empty", to: self)
@@ -386,5 +387,54 @@ final class EntryPointTests: XCTestCase {
     XCTAssertFalse(driver.text("So far").exists)
     XCTAssertTrue(driver.button("+ Add a sleep to this day").exists)
     driver.attachScreenshot("day-sheet-empty", to: self)
+  }
+
+  /// `what-to-try`: the Charts tab of a whole past week, scrolled to the end. Page `charts/what-to-try.html`.
+  @MainActor
+  func testWhatToTry() throws {
+    let driver = AppDriver.launch(seed: "week", now: "2026-11-08T19:30:00+01:00")
+    driver.openCharts()
+    driver.scrollToWhatToTry()
+    XCTAssertTrue(driver.text("What to try").exists)
+    XCTAssertEqual(
+      driver.tip.label,
+      "Mila's bedtime moved around by about 40 minutes this week. Try a fixed bedtime between 19:10 and 19:40.")
+    assertGeneralTipsAndDoctorLine(driver)
+    XCTAssertFalse(driver.button("Add a sleep from earlier").exists)
+    driver.attachScreenshot("what-to-try", to: self)
+  }
+
+  /// `what-to-try-keep-logging`: the Charts tab of the current week with 2 counted days, scrolled to the end.
+  /// Page `charts/keep-logging.html`. Then "Add a sleep from earlier" opens Add sleep from now (criterion 3).
+  @MainActor
+  func testWhatToTryKeepLogging() throws {
+    let driver = AppDriver.launch(seed: "week-today", now: "2026-11-11T10:00:00+01:00")
+    driver.openCharts()
+    driver.scrollToWhatToTry()
+    XCTAssertEqual(
+      driver.tip.label,
+      "Keep logging. With sleeps on 4 days of the week, Nap Time shows what to try for Mila. 2 of 4 days so far.")
+    assertGeneralTipsAndDoctorLine(driver)
+    XCTAssertTrue(driver.button("Add a sleep from earlier").isHittable)
+    driver.attachScreenshot("what-to-try-keep-logging", to: self)
+
+    driver.button("Add a sleep from earlier").tap()
+    driver.waitFor(driver.app.descendants(matching: .any)["sleep-form"])
+    XCTAssertEqual(driver.button("fell-asleep").label, "Wed 11 Nov · 09:00")
+    XCTAssertEqual(driver.button("woke-up").label, "Wed 11 Nov · 10:00")
+    XCTAssertTrue(driver.button("Nap").isSelected)
+  }
+
+  private func assertGeneralTipsAndDoctorLine(
+    _ driver: AppDriver, file: StaticString = #filePath, line: UInt = #line
+  ) {
+    for text in [
+      "Start a calm wind-down 30 minutes before bed.",
+      "Keep the same wake-up time, also at the weekend.",
+      "End the last nap at least 3 hours before bedtime.",
+      "These are general tips. If you are worried about Mila's sleep, ask your doctor.",
+    ] {
+      XCTAssertTrue(driver.text(text).exists, "Not found: \(text)", file: file, line: line)
+    }
   }
 }
