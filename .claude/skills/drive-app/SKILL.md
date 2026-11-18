@@ -45,7 +45,9 @@ Each one starts the app with `--test-mode`, its seed, and the default test time 
 - `settings-no-icloud`: `--seed no-icloud`. Taps the gear. "Not shared yet", "Sign in to iCloud in the iPhone Settings to share with your partner.", and no button below the card. Page `settings/no-icloud.html`. Test: `EntryPointTests.testSettingsNoICloud`.
 - `joining`: `--seed joining`. The app opens on "Joining the family…" with "This takes a few seconds." and a still spinner on the day sky. Page `family/joining.html`. Test: `EntryPointTests.testJoining`.
 - `joined`: `--seed joined`. The app opens on "You joined the family" with Mila's avatar, "You now see and log Mila and Noah, together with your partner.", and "Start". Page `family/joined.html`. Test: `EntryPointTests.testJoined`.
-- `live-activity`: the Lock Screen view of the placeholder Live Activity, rendered with `ImageRenderer` (ADR 0003). Test: `EntryPointTests.testLiveActivity`.
+- `live-activity`: no launch. The night card of the sleep timer for the running sleep of the seed `sleeping`, rendered with `ImageRenderer` (ADR 0003) and paused at `2026-06-22T04:10:14+02:00`: Mila's avatar "M", "Mila is sleeping", "8:28:14", "since 19:42", and "Awake", in the night colours. Page `live-activity/lock-screen.html` (the card only). Test: `EntryPointTests.testLiveActivity`.
+- `live-activity-nap`: no launch. The nap card of the sleep timer for the running sleep of the seed `napping`, rendered with `ImageRenderer` and paused at `2026-06-21T13:50:12+02:00`: "Mila is sleeping", "45:12", "since 13:05", and "Awake", in the day colours. Page `live-activity/nap.html` (the card only). Test: `EntryPointTests.testLiveActivityNap`.
+- `dynamic-island`: no launch. The compact, the minimal, and the expanded Dynamic Island for the seed `sleeping`, rendered with `ImageRenderer` and paused at `2026-06-22T04:10:14+02:00`: compact with the moon and "8:28:14", minimal with the moon, expanded with the avatar, "Mila is sleeping", "8:28:14", "since 19:42", and "Awake". Page `live-activity/dynamic-island.html`. Test: `EntryPointTests.testDynamicIsland`.
 
 ## Add an entry point
 

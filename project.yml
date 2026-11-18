@@ -24,6 +24,9 @@ targets:
     platform: iOS
     sources:
       - App
+      # The sleep timer's attributes and views, and "Awake" (CRAFT-51).
+      - Widget/Shared
+      - Widget/Intent
     dependencies:
       - package: Core
       - target: NapTimeStore
@@ -55,7 +58,10 @@ targets:
     platform: iOS
     sources:
       - Widget
+      # Baloo 2, so the sleep timer uses the gallery's font.
+      - App/Fonts
     dependencies:
+      - package: Core
       - target: NapTimeStore
         embed: false
       - sdk: WidgetKit.framework
@@ -64,6 +70,7 @@ targets:
       path: Widget/Info.plist
       properties:
         CFBundleDisplayName: Nap Time
+        UIAppFonts: [Baloo2-SemiBold.ttf, Baloo2-Bold.ttf, Baloo2-ExtraBold.ttf]
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:
@@ -101,8 +108,11 @@ targets:
     platform: iOS
     sources:
       - UITests
-      - path: Widget/LiveActivityView.swift
+      # The sleep timer's views, rendered with ImageRenderer (ADR 0003), and Baloo 2 for them. Not EndSleepIntent.
+      - Widget/Shared
+      - App/Fonts
     dependencies:
+      - package: Core
       - target: NapTime
     settings:
       base:

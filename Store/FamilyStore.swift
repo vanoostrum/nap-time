@@ -81,6 +81,11 @@ public final class FamilyStore {
   /// The children in the shared store, in the order they were added: the family that this phone joined.
   public private(set) var sharedStoreChildren: [Child] = []
 
+  /// Runs after each change that this phone writes: each save of a child or a sleep (also the merge save), each
+  /// move into the share, the writes after `acceptShare(_:)`, and each change of `sharing`. The app sets it once,
+  /// to reconcile the sleep timers and to plan the nudges.
+  @ObservationIgnored public var onSave: (() -> Void)?
+
   public let container: NSPersistentCloudKitContainer
   private let privateStore: NSPersistentStore
   private let sharedStore: NSPersistentStore
@@ -329,6 +334,7 @@ public final class FamilyStore {
       }
     }
     await processStoreChange()
+    onSave?()
   }
 
   /// Saves a change that the iCloud sharing sheet made to the share, such as a new participant.
@@ -429,6 +435,7 @@ public final class FamilyStore {
       guard !objects.isEmpty else { return }
       try await shareMoving.moveIntoShare(objects)
       reload()
+      onSave?()
     } catch {
       Self.logger.error("Moving into the share failed: \(String(describing: error), privacy: .public)")
     }
@@ -441,7 +448,10 @@ public final class FamilyStore {
       (try? container.fetchShares(in: sharedStore).first) ?? (try? container.fetchShares(in: privateStore).first)
     let facts = ShareFacts(hasICloudAccount: hasAccount, share: share.map(Self.facts(of:)))
     let new = FamilySharing(facts)
-    if new != sharing { sharing = new }
+    if new != sharing {
+      sharing = new
+      onSave?()
+    }
   }
 
   private static func facts(of share: CKShare) -> ShareFacts.Share {
@@ -630,11 +640,12 @@ public final class FamilyStore {
     return object
   }
 
-  /// Saves the view context. A save is a store change.
+  /// Saves the view context. A save is a store change, and calls `onSave`.
   private func save() throws {
     if context.hasChanges { try context.save() }
     reload()
     storeChanged()
+    onSave?()
   }
 
   private func reload() {

@@ -411,16 +411,34 @@ final class EntryPointTests: XCTestCase {
     driver.attachScreenshot("charts-empty", to: self)
   }
 
-  /// A UI test cannot open a Live Activity, so it renders the Lock Screen view (ADR 0003).
+  /// `live-activity`: the night card of the sleep timer for the seed `sleeping`, at 04:10:14. A UI test cannot open a
+  /// Live Activity, so it renders the card's view (ADR 0003). Page `live-activity/lock-screen.html`.
   @MainActor
   func testLiveActivity() throws {
-    let renderer = ImageRenderer(content: LiveActivityView().frame(width: 360, height: 120))
-    renderer.scale = 3
-    let image = try XCTUnwrap(renderer.uiImage, "ImageRenderer gave no image")
-    let attachment = XCTAttachment(data: try XCTUnwrap(image.pngData()), uniformTypeIdentifier: "public.png")
-    attachment.name = "live-activity.png"
-    attachment.lifetime = .keepAlways
-    add(attachment)
+    let face = try SleepTimerRender.face(seed: .sleeping, pauseTime: "2026-06-22T04:10:14+02:00")
+    XCTAssertEqual(face.heading, "Mila is sleeping")
+    XCTAssertEqual(face.since, "since 19:42")
+    XCTAssertEqual(face.kind, .night)
+    try SleepTimerRender.attach(SleepTimerRender.card(face), as: "live-activity", to: self)
+  }
+
+  /// `live-activity-nap`: the nap card of the sleep timer for the seed `napping`, at 13:50:12.
+  /// Page `live-activity/nap.html`.
+  @MainActor
+  func testLiveActivityNap() throws {
+    let face = try SleepTimerRender.face(seed: .napping, pauseTime: "2026-06-21T13:50:12+02:00")
+    XCTAssertEqual(face.heading, "Mila is sleeping")
+    XCTAssertEqual(face.since, "since 13:05")
+    XCTAssertEqual(face.kind, .nap)
+    try SleepTimerRender.attach(SleepTimerRender.card(face), as: "live-activity-nap", to: self)
+  }
+
+  /// `dynamic-island`: the compact, minimal, and expanded Dynamic Island for the seed `sleeping`, at 04:10:14.
+  /// Page `live-activity/dynamic-island.html`.
+  @MainActor
+  func testDynamicIsland() throws {
+    let face = try SleepTimerRender.face(seed: .sleeping, pauseTime: "2026-06-22T04:10:14+02:00")
+    try SleepTimerRender.attach(SleepTimerRender.island(face), as: "dynamic-island", to: self)
   }
 
   /// Criterion 3: the sheet of a counted day, from Tuesday's bar.

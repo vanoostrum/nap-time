@@ -111,5 +111,5 @@ The sheet that slides up when a parent taps a sleep day on the charts, as a bar 
 _Avoid_: day details, popup, modal
 
 **Sleep timer**:
-The Lock Screen and Dynamic Island view of a running sleep, with an "Awake" button.
-_Avoid_: Live Activity view, widget
+The Live Activity that counts a running sleep from its start, on the Lock Screen and in the Dynamic Island, with an "Awake" button. Only the phone that tapped "Sleep time" shows it. A night's timer shows from 04:00.
+_Avoid_: Live Activity view, widget, stopwatch, countdown
