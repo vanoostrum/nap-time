@@ -79,8 +79,8 @@ import Testing
     try store.startSleep(childID: mila.id, at: date("2026-06-21T09:00:00+02:00"), kind: .nap)
 
     #expect(store.onlyOnThisPhone.isEmpty)
-    let running = try #require(running(of: mila, in: store))
-    #expect(!store.isOnlyOnThisPhone(sleepID: running.id))
+    let started = try #require(running(of: mila, in: store))
+    #expect(!store.isOnlyOnThisPhone(sleepID: started.id))
     #expect(store.children.map(\.name) == ["Mila", "Noah"])
   }
 
