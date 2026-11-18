@@ -196,6 +196,30 @@ struct AppDriver {
     app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
   }
 
+  /// The "What to try" card at the end of the Charts screen.
+  var whatToTry: XCUIElement { app.descendants(matching: .any)["what-to-try"] }
+
+  /// The tip or "keep logging" text on the "What to try" card. Its label ends with the bold part.
+  var tip: XCUIElement { app.descendants(matching: .any)["tip"] }
+
+  /// Scrolls the Charts screen to its end, so the whole "What to try" card shows.
+  func scrollToWhatToTry(file: StaticString = #filePath, line: UInt = #line) {
+    waitFor(whatToTry, file: file, line: line)
+    let scrollView = app.scrollViews.firstMatch
+    for _ in 0..<3 {
+      scrollView.swipeUp()
+    }
+    XCTAssertTrue(whatToTry.isHittable, "The What to try card does not show", file: file, line: line)
+  }
+
+  /// Scrolls the Charts screen back to its top, where the timeline rows show.
+  func scrollChartsToTop() {
+    let scrollView = app.scrollViews.firstMatch
+    for _ in 0..<3 {
+      scrollView.swipeDown()
+    }
+  }
+
   /// Taps the gear on the home screen and waits for Settings.
   func openSettings() {
     let gear = button("Settings")

@@ -3,8 +3,8 @@ import SwiftUI
 import UIKit
 
 /// The Charts tab: one week of the selected child, with the header and its arrows, the two stat cards,
-/// "Hours per day", and the timeline "When <name> slept", or the empty state with "Add a sleep" for a week
-/// with no sleeps. A tap on a bar or a timeline row opens the day sheet of that sleep day.
+/// "Hours per day", the timeline "When <name> slept", and the "What to try" card, or the empty state with
+/// "Add a sleep" for a week with no sleeps. A tap on a bar or a timeline row opens the day sheet of that sleep day.
 ///
 /// It opens on `Week.opening`. The week it shows is view state, so it opens there again
 /// each time the tab or the child changes. The day sheet is an overlay, not a presented sheet,
@@ -15,7 +15,8 @@ struct ChartsView: View {
   let sleeps: [Sleep]
   let now: Date
   let timeZone: TimeZone
-  /// "Add a sleep" on the empty state, or "+ Add a sleep to this day" on the day sheet, with its start values.
+  /// "Add a sleep" on the empty state, "Add a sleep from earlier" on the What to try card,
+  /// or "+ Add a sleep to this day" on the day sheet, with its start values.
   let onAddSleep: (SleepStartValues) -> Void
   /// A pencil on the day sheet.
   let onEditSleep: (Sleep) -> Void
@@ -45,6 +46,11 @@ struct ChartsView: View {
               TimelineCard(
                 name: child.name, rows: Timeline.rows(of: week, sleeps: sleeps, now: now, in: timeZone),
                 onTap: openSheet)
+              if let whatToTry = WhatToTry(
+                week: week, sleeps: sleeps, birthDate: child.birthDate, now: now, in: timeZone)
+              {
+                WhatToTryCard(name: child.name, card: whatToTry, onAddSleep: addSleepFromEarlier)
+              }
             } else {
               emptyCard
             }
@@ -165,18 +171,82 @@ struct ChartsView: View {
       Text("Log \(child.name)'s sleeps on the Today tab, or add one from earlier.")
         .font(.baloo(18))
         .fixedSize(horizontal: false, vertical: true)
-      Button("Add a sleep") {
-        let current = Week.current(now: now, in: timeZone)
-        onAddSleep(
-          week == current
-            ? SleepStartValues.today(now: now, in: timeZone) : SleepStartValues.on(week.sunday, now: now, in: timeZone))
-      }
-      .buttonStyle(PrimaryButtonStyle())
-      .padding(.bottom, 6)
+      Button("Add a sleep", action: addSleepFromEarlier)
+        .buttonStyle(PrimaryButtonStyle())
+        .padding(.bottom, 6)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
     .background(RoundedRectangle(cornerRadius: 30).fill(.white))
+  }
+
+  /// "Add a sleep" and "Add a sleep from earlier": from now on the current week,
+  /// else inside the shown week's Sunday sleep day.
+  private func addSleepFromEarlier() {
+    onAddSleep(
+      week == Week.current(now: now, in: timeZone)
+        ? SleepStartValues.today(now: now, in: timeZone) : SleepStartValues.on(week.sunday, now: now, in: timeZone))
+  }
+}
+
+/// The "What to try" card, from `.try` in `design/gallery.css`: the tip or "keep logging" on a pale panel,
+/// the three general tips, the doctor line, and "Add a sleep from earlier" while the week needs more days.
+private struct WhatToTryCard: View {
+  let name: String
+  let card: WhatToTry
+  let onAddSleep: () -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      Text("What to try").balooLine(18, .extraBold, lineHeight: 19)
+      tip(card.message(name: name))
+        .font(.baloo(18, .bold))
+        // `line-height: 1.3` of `.try .tip`. A multiple of the point size, so it grows with Dynamic Type.
+        .lineHeight(.multiple(factor: 1.3))
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 22).fill(Theme.track))
+        .accessibilityIdentifier("tip")
+      VStack(alignment: .leading, spacing: 0) {
+        ForEach(card.generalTips, id: \.self) { tip in
+          // The disc of a CSS list: the text starts 20 points in, with the disc in the middle of that space.
+          HStack(alignment: .firstTextBaseline, spacing: 0) {
+            Text("●").font(.system(size: 6)).baselineOffset(4).frame(width: 20)
+            Text(tip)
+              .fixedSize(horizontal: false, vertical: true)
+              .frame(maxWidth: .infinity, alignment: .leading)
+          }
+          .accessibilityElement(children: .combine)
+          .accessibilityLabel(tip)
+        }
+      }
+      .font(.baloo(16))
+      // `line-height: 1.35` of `.try ul`.
+      .lineHeight(.multiple(factor: 1.35))
+      Text(WhatToTry.doctorLine(name: name))
+        .balooLine(14, lineHeight: 18)
+        .fixedSize(horizontal: false, vertical: true)
+      if case .keepLogging = card.content {
+        Button("Add a sleep from earlier", action: onAddSleep)
+          .buttonStyle(PrimaryButtonStyle())
+          .padding(.top, 4)
+          .padding(.bottom, 6)
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
+    .background(RoundedRectangle(cornerRadius: 30).fill(.white))
+    .accessibilityElement(children: .contain)
+    .accessibilityIdentifier("what-to-try")
+  }
+
+  /// The text, then the bold part in Baloo 2 ExtraBold.
+  private func tip(_ message: WhatToTry.Message) -> Text {
+    guard let bold = message.bold else { return Text(message.text) }
+    let strong = Text(bold).font(.baloo(18, .extraBold))
+    return Text("\(message.text) \(strong)")
   }
 }
 
