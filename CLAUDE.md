@@ -48,3 +48,16 @@ xcodebuild test -project NapTime.xcodeproj -scheme NapTime \
 In CI, the workflow `CI` (`.github/workflows/ci.yml`) runs the checks `Core (Linux)`, `App (iOS)`, and `Screenshots`. A cloud agent proves CI with the `verify` skill and screens with the `drive-app` skill.
 
 Test mode: launch the app with `--test-mode`, and optionally `--now <ISO 8601 date with a UTC offset>` and `--seed <name>`. Core's `LaunchArguments` parses them.
+
+## Release
+
+A merge deploys nothing. The workflow `Release` (`.github/workflows/release.yml`) uploads `main` to TestFlight (ADR 0009, 0010).
+
+1. On GitHub, open Actions, then `Release`, then "Run workflow" on `main`. A run from another branch does nothing.
+2. The job `release` waits for approval in the environment `testflight`. Open the run and click "Review deployments", then "Approve and deploy".
+3. The run archives, exports, checks the signed entitlements, uploads, and then the job `tag` pushes the tag `release/<build number>`. The build number is the run number, and the version is `MARKETING_VERSION` in `project.yml`.
+
+- **The upload failed:** click "Re-run all jobs". A re-run keeps the build number, so it uploads the same build again.
+- **The upload succeeded:** App Store Connect rejects the same build number again, so start a new run.
+- **Only the tag push failed:** click "Re-run failed jobs". It runs only `tag`, with no upload and no approval.
+- TestFlight builds expire after 90 days. Start a release at least every 90 days.
