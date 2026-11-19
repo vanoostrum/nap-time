@@ -636,8 +636,7 @@ a.danger { text-decoration: none; }
   box-shadow: 0 8px 24px rgba(10, 25, 50, 0.35);
 }
 .app-icon .icon-art { position: absolute; inset: 0; width: 100%; height: 100%; }
-.icon-art .glow-in { stop-color: var(--moon); stop-opacity: 0.3; }
-.icon-art .glow-out { stop-color: var(--moon); stop-opacity: 0; }
+.icon-art .icon-glow { fill: var(--moon); opacity: 0.45; }
 .icon-art .mask-keep { fill: #ffffff; }
 .icon-art .mask-bite { fill: #000000; }
 .icon-art .icon-moon { fill: var(--moon); }
