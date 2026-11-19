@@ -1,0 +1,87 @@
+# Uploads a build of `main` to TestFlight. Starts by hand, and waits for Theo's approval in the
+# environment `testflight` (ADR 0009). Signs with automatic signing and an App Store Connect API key (ADR 0010).
+# The build number is the run number. See "Release" in CLAUDE.md.
+name: Release
+
+on:
+  workflow_dispatch:
+
+# One release at a time. A second run waits, and is never cancelled.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Release to TestFlight
+    # Only from main, on top of the branch rule of `testflight`. From another branch, nothing asks for approval.
+    if: github.ref == 'refs/heads/main'
+    environment: testflight
+    runs-on: macos-26
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - name: Select Xcode
+        run: scripts/ci-select-xcode.sh >> "$GITHUB_ENV"
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate the Xcode project
+        run: xcodegen generate
+      - name: Archive, unsigned
+        run: scripts/release-archive.sh "$GITHUB_RUN_NUMBER" build/NapTime.xcarchive
+      - name: Check the archive
+        run: python3 scripts/release_check.py archive build/NapTime.xcarchive --build "$GITHUB_RUN_NUMBER"
+      # altool finds the key as AuthKey_<key id>.p8 in $API_PRIVATE_KEYS_DIR. The last step removes it.
+      - name: Write the API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/private_keys"
+          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/private_keys/AuthKey_$ASC_KEY_ID.p8"
+      # Signs for App Store Connect with a cloud-managed distribution certificate. Writes the .ipa, uploads nothing.
+      - name: Export and sign
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          xcodebuild -exportArchive -archivePath build/NapTime.xcarchive -exportPath build/export \
+            -exportOptionsPlist scripts/export-options.plist -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/private_keys/AuthKey_$ASC_KEY_ID.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+      # Fails before the upload unless the app and the widget have the production entitlements.
+      - name: Check the signed entitlements
+        run: python3 scripts/release_check.py entitlements build/export/NapTime.ipa
+      - name: Upload to TestFlight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          API_PRIVATE_KEYS_DIR="$RUNNER_TEMP/private_keys" xcrun altool --upload-app --type ios \
+            --file build/export/NapTime.ipa --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+      - name: Remove the API key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/private_keys"
+
+  # A separate job, so "Re-run failed jobs" after a failed tag push does not upload or ask for approval again.
+  tag:
+    name: Tag the release
+    needs: release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      # A lightweight tag on the run's commit. Pushing the same tag to the same commit again succeeds.
+      - name: Push the tag release/<build number>
+        run: git push origin "$GITHUB_SHA:refs/tags/release/$GITHUB_RUN_NUMBER"

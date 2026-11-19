@@ -13,7 +13,7 @@ settings:
     SWIFT_STRICT_CONCURRENCY: complete
     IPHONEOS_DEPLOYMENT_TARGET: "26.0"
     TARGETED_DEVICE_FAMILY: "1"
-    MARKETING_VERSION: "0.1.0"
+    MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
 packages:
   Core:
@@ -35,6 +35,9 @@ targets:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: Nap Time
+        # XcodeGen writes 1.0 and 1 unless told. The build settings carry the version and the run number (CRAFT-76).
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
         UIAppFonts: [Baloo2-SemiBold.ttf, Baloo2-Bold.ttf, Baloo2-ExtraBold.ttf]
         NSSupportsLiveActivities: true
@@ -43,6 +46,8 @@ targets:
         # The partner's changes arrive in the background through CloudKit pushes.
         UIBackgroundModes: [remote-notification]
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        # The app uses only the encryption of iOS, so TestFlight asks no export question (CRAFT-76).
+        ITSAppUsesNonExemptEncryption: false
     entitlements:
       path: App/NapTime.entitlements
       properties:
@@ -53,6 +58,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: nl.clearblocks.naptime
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
   NapTimeWidget:
     type: app-extension
     platform: iOS
@@ -70,6 +76,9 @@ targets:
       path: Widget/Info.plist
       properties:
         CFBundleDisplayName: Nap Time
+        # XcodeGen writes 1.0 and 1 unless told. The build settings carry the version and the run number (CRAFT-76).
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UIAppFonts: [Baloo2-SemiBold.ttf, Baloo2-Bold.ttf, Baloo2-ExtraBold.ttf]
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
