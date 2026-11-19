@@ -76,7 +76,7 @@ def main(env=None, cwd=None):
         return 0
 
     if ticked:
-        print(f"::notice::schema_deployed is ticked, so the schema check passes. {lowercase_first(reason)}")
+        print(f"::notice::schema_deployed is ticked, so the schema check passes, although {lowercase_first(reason)}")
         return 0
     print(f"::error::{reason} {TODO}")
     return 1
