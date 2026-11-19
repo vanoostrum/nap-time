@@ -2,9 +2,10 @@
 """Checks a Release build of Nap Time before it goes to TestFlight (CRAFT-76).
 
 Usage:
-  scripts/release_check.py archive <NapTime.xcarchive> [--build N]
+  scripts/release_check.py archive <NapTime.xcarchive> [--build N] [--signed]
       The app's version is MARKETING_VERSION in project.yml, the widget has the app's version and build
       number, ITSAppUsesNonExemptEncryption is false, and the primary icon is AppIcon. `App (iOS)` and `Release`.
+      With --signed, also the entitlements that the ad-hoc signature carries into the export. macOS only.
   scripts/release_check.py entitlements <NapTime.ipa>
       The signed entitlements of the app and the widget are the ones for production. macOS only: reads
       them with codesign. `Release`, before the upload.
@@ -91,6 +92,17 @@ def check_entitlements(app, widget):
     return compare(APP, app, APP_ENTITLEMENTS) + compare(f"{APP}/PlugIns/{WIDGET}", widget, WIDGET_ENTITLEMENTS)
 
 
+def check_archived_entitlements(app, widget):
+    """The errors in the ad-hoc signature of the archive. The export keeps only these keys, and sets the
+    production values itself, so aps-environment only has to be there."""
+    expected = {k: v for k, v in APP_ENTITLEMENTS.items() if "environment" not in k and k != "get-task-allow"}
+    errors = compare(APP, app, expected)
+    if "aps-environment" not in app:
+        errors.append(f"{APP}: aps-environment is missing")
+    widget_expected = {k: v for k, v in WIDGET_ENTITLEMENTS.items() if k != "get-task-allow"}
+    return errors + compare(f"{APP}/PlugIns/{WIDGET}", widget, widget_expected)
+
+
 def check_icon(path):
     """The errors of an App Store icon PNG: not 1024x1024, or any transparency."""
     data = pathlib.Path(path).read_bytes()
@@ -149,6 +161,7 @@ def main(argv=None):
     archive.add_argument("path", type=pathlib.Path)
     archive.add_argument("--build")
     archive.add_argument("--project", type=pathlib.Path, default=REPO / "project.yml")
+    archive.add_argument("--signed", action="store_true")
     entitlements = sub.add_parser("entitlements")
     entitlements.add_argument("ipa", type=pathlib.Path)
     icon = sub.add_parser("icon")
@@ -164,6 +177,10 @@ def main(argv=None):
                 marketing_version(args.project),
                 args.build,
             )
+            if args.signed:
+                errors += check_archived_entitlements(
+                    signed_entitlements(app), signed_entitlements(app / "PlugIns" / WIDGET)
+                )
         elif args.check == "entitlements":
             errors = run_entitlements(args.ipa)
         else:

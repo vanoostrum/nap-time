@@ -8,12 +8,14 @@ import plistlib
 import struct
 import tempfile
 import unittest
+from unittest import mock
 import zlib
 
 from release_check import (
     APP,
     WIDGET,
     check_archive,
+    check_archived_entitlements,
     check_entitlements,
     check_icon,
     committed_icon,
@@ -200,6 +202,60 @@ class EntitlementTests(unittest.TestCase):
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(main(["entitlements", "/no/such/NapTime.ipa"]), 1)
+
+
+class ArchivedEntitlementTests(unittest.TestCase):
+    """The ad-hoc signed archive must carry the entitlements, or the export drops them (first Release run)."""
+
+    def development(self, **changes):
+        return app_entitlements(
+            **{
+                "aps-environment": "development",
+                "com.apple.developer.icloud-container-environment": None,
+                "get-task-allow": None,
+                **changes,
+            }
+        )
+
+    def test_the_entitlements_of_project_yml_pass(self):
+        self.assertEqual(check_archived_entitlements(self.development(), widget_entitlements(**{"get-task-allow": None})), [])
+
+    def test_an_unsigned_archive_fails_for_every_key(self):
+        errors = check_archived_entitlements({}, {})
+        self.assertEqual(len(errors), 5, errors)
+        self.assertTrue(any(WIDGET in e for e in errors), errors)
+
+    def test_each_missing_or_wrong_key_fails_and_names_the_bundle_and_key(self):
+        for key in [
+            "aps-environment",
+            "com.apple.developer.icloud-container-identifiers",
+            "com.apple.developer.icloud-services",
+            "com.apple.security.application-groups",
+        ]:
+            with self.subTest(key=key):
+                errors = check_archived_entitlements(self.development(**{key: None}), widget_entitlements())
+                self.assertEqual(len(errors), 1, errors)
+                self.assertIn(APP, errors[0])
+                self.assertIn(key, errors[0])
+        errors = check_archived_entitlements(
+            self.development(), widget_entitlements(**{"com.apple.security.application-groups": ["group.other"]})
+        )
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn(WIDGET, errors[0])
+
+    def test_the_archive_command_checks_the_signature_only_when_asked(self):
+        with tempfile.TemporaryDirectory() as tmp, mock.patch("release_check.signed_entitlements", return_value={}):
+            archive = pathlib.Path(tmp) / "NapTime.xcarchive"
+            app = archive / "Products/Applications" / APP
+            widget = app / "PlugIns" / WIDGET
+            widget.mkdir(parents=True)
+            (app / "Info.plist").write_bytes(plistlib.dumps(app_info()))
+            (widget / "Info.plist").write_bytes(plistlib.dumps(widget_info()))
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(main(["archive", str(archive), "--build", "42"]), 0)
+                self.assertEqual(main(["archive", str(archive), "--build", "42", "--signed"]), 1)
+            self.assertIn("aps-environment is missing", out.getvalue())
 
 
 class IconTests(unittest.TestCase):
