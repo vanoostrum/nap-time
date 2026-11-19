@@ -98,6 +98,12 @@ jobs:
           xcodebuild -list
           scheme="$(xcodebuild -list -json | python3 -c 'import json,sys; s=json.load(sys.stdin)["workspace"]["schemes"]; print("Core-Package" if "Core-Package" in s else "Core")')"
           xcodebuild test -scheme "$scheme" -destination "id=$SIMULATOR_ID" CODE_SIGNING_ALLOWED=NO
+      # The same unsigned Release archive that `Release` exports, so a PR finds a bad version or icon first (CRAFT-76).
+      - name: Archive Release, unsigned, and check it
+        run: |
+          set -euo pipefail
+          scripts/release-archive.sh "$GITHUB_RUN_NUMBER" build/NapTime.xcarchive
+          python3 scripts/release_check.py archive build/NapTime.xcarchive --build "$GITHUB_RUN_NUMBER"
 
   screenshots:
     name: Screenshots
