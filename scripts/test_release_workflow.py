@@ -82,6 +82,11 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertEqual(order, sorted(order))
         self.assertEqual(sum("altool" in step for step in s), 1)
 
+    def test_the_archive_check_reads_the_ad_hoc_signature(self):
+        # Without it, an archive that lost its entitlements reaches the export (the first Release run).
+        s = steps(self.release)
+        self.assertIn("--signed", s[index_of(s, "release_check.py archive")])
+
     def test_the_build_number_is_the_run_number(self):
         archive = steps(self.release)[index_of(steps(self.release), "scripts/release-archive.sh")]
         self.assertIn('"$GITHUB_RUN_NUMBER"', archive)

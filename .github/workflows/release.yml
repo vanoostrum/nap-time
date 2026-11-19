@@ -32,10 +32,10 @@ jobs:
         run: brew install xcodegen
       - name: Generate the Xcode project
         run: xcodegen generate
-      - name: Archive, unsigned
+      - name: Archive, signed ad hoc
         run: scripts/release-archive.sh "$GITHUB_RUN_NUMBER" build/NapTime.xcarchive
       - name: Check the archive
-        run: python3 scripts/release_check.py archive build/NapTime.xcarchive --build "$GITHUB_RUN_NUMBER"
+        run: python3 scripts/release_check.py archive build/NapTime.xcarchive --build "$GITHUB_RUN_NUMBER" --signed
       # altool finds the key as AuthKey_<key id>.p8 in $API_PRIVATE_KEYS_DIR. The last step removes it.
       - name: Write the API key
         env:
