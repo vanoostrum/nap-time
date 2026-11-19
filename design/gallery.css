@@ -637,15 +637,12 @@ a.danger { text-decoration: none; }
 }
 .app-icon .icon-moon {
   position: absolute;
-  right: 16%; top: 14%; width: 46%; height: 46%;
+  right: 10%; top: 12%; width: 64%; height: 64%;
   fill: var(--moon);
 }
 .app-icon .icon-star { position: absolute; fill: var(--star); }
-.app-icon .icon-star.one { left: 16%; top: 20%; width: 14%; height: 14%; }
-.app-icon .icon-star.two { left: 34%; top: 46%; width: 8%; height: 8%; }
-.app-icon .icon-hills { position: absolute; left: 0; bottom: 0; width: 100%; height: 34%; }
-.app-icon .icon-hills .back { fill: var(--night-hill-back); }
-.app-icon .icon-hills .front { fill: var(--night-hill-front); }
+.app-icon .icon-star.one { left: 10%; top: 14%; width: 22%; height: 22%; }
+.app-icon .icon-star.two { left: 20%; top: 58%; width: 14%; height: 14%; }
 
 .icon-preview { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--white); }
 .icon-preview p { font-size: 15px; opacity: 0.9; }
