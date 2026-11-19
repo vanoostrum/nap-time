@@ -23,11 +23,20 @@ public struct LaunchArgumentError: Error, Equatable, CustomStringConvertible {
 /// - `--now <ISO 8601 date with a UTC offset>` replaces the fixed clock in test mode.
 /// - `--seed <name>` picks the data that test mode starts with. The names are the raw values of `Seed`. The default is `none`.
 ///
+/// - `--init-cloudkit-schema` makes a Debug build fill the development CloudKit schema once (ADR 0011).
+///   It does not change the `AppMode`, and test mode ignores it.
+///
 /// Without `--test-mode`, `--now` and `--seed` are ignored and not checked. Unknown arguments are ignored.
 public enum LaunchArguments {
   public static let testMode = "--test-mode"
   public static let now = "--now"
   public static let seed = "--seed"
+  public static let initCloudKitSchema = "--init-cloudkit-schema"
+
+  /// `true` when the arguments hold `--init-cloudkit-schema` and not `--test-mode`.
+  public static func initializesCloudKitSchema(_ arguments: [String]) -> Bool {
+    arguments.contains(initCloudKitSchema) && !arguments.contains(testMode)
+  }
 
   public static func parse(_ arguments: [String]) throws(LaunchArgumentError) -> AppMode {
     guard arguments.contains(testMode) else { return .normal }

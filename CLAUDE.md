@@ -53,11 +53,19 @@ Test mode: launch the app with `--test-mode`, and optionally `--now <ISO 8601 da
 
 A merge deploys nothing. The workflow `Release` (`.github/workflows/release.yml`) uploads `main` to TestFlight (ADR 0009, 0010).
 
-1. On GitHub, open Actions, then `Release`, then "Run workflow" on `main`. A run from another branch does nothing.
-2. The job `release` waits for approval in the environment `testflight`. Open the run and click "Review deployments", then "Approve and deploy".
-3. The run archives, exports, checks the signed entitlements, uploads, and then the job `tag` pushes the tag `release/<build number>`. The build number is the run number, and the version is `MARKETING_VERSION` in `project.yml`.
+1. On GitHub, open Actions, then `Release`, then "Run workflow" on `main`. A run from another branch does nothing. Tick `schema_deployed` only when you deployed the CloudKit schema (see below).
+2. The job `schema` checks the Core Data model. Then the job `release` waits for approval in the environment `testflight`. Open the run and click "Review deployments", then "Approve and deploy".
+3. The run archives, exports, checks the signed entitlements, uploads, and then the job `tag` pushes the annotated tag `release/<build number>` with the line `schema-check: yes`. The build number is the run number, and the version is `MARKETING_VERSION` in `project.yml`.
 
 - **The upload failed:** click "Re-run all jobs". A re-run keeps the build number, so it uploads the same build again.
 - **The upload succeeded:** App Store Connect rejects the same build number again, so start a new run.
-- **Only the tag push failed:** click "Re-run failed jobs". It runs only `tag`, with no upload and no approval.
+- **Only the tag push failed:** click "Re-run failed jobs". It runs only `tag`, with no upload and no approval. If the tag is already on GitHub, the re-run fails, and nothing more is needed.
 - TestFlight builds expire after 90 days. Start a release at least every 90 days.
+
+**The CloudKit schema.** The Core Data model only grows: a change only adds entities or optional attributes (ADR 0011). Before a release that changes the model:
+
+1. Run a Debug build from Xcode on your phone with the launch argument `--init-cloudkit-schema`. The Xcode console shows "The CloudKit schema is initialized".
+2. In the CloudKit Console, open `iCloud.nl.clearblocks.naptime`. Check that the development schema has the record types `CD_Child` and `CD_Sleep` with all fields. Click "Deploy Schema Changes".
+3. Start `Release` with `schema_deployed` ticked.
+
+The job `schema` fails before the approval when the tick is missing and the model changed since the newest release tag with `schema-check: yes`, or when no release tag has that line.

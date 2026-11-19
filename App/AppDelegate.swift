@@ -68,14 +68,17 @@ final class AppModel {
   @ObservationIgnored private(set) var sleepTimers: SleepTimerController?
   @ObservationIgnored private(set) var nudges: NudgeScheduler?
   @ObservationIgnored private var observers: [any NSObjectProtocol] = []
+  /// `--init-cloudkit-schema` was given in normal mode. Only a Debug build acts on it.
+  @ObservationIgnored private var initializesCloudKitSchema = false
 
-  private static let logger = Logger(subsystem: "nl.clearblocks.naptime", category: "FamilyStore")
+  private nonisolated static let logger = Logger(subsystem: "nl.clearblocks.naptime", category: "FamilyStore")
   private static let selectedChildKey = "selectedChildID"
 
   /// Starts the load of the family store once, at launch.
-  func launch(_ mode: AppMode) {
+  func launch(_ mode: AppMode, initializesCloudKitSchema: Bool = false) {
     guard load == nil else { return }
     self.mode = mode
+    self.initializesCloudKitSchema = initializesCloudKitSchema
     // Here, not after the load, so the tap on a nudge that launched the app reaches its delegate.
     nudges = NudgeScheduler(mode: mode)
     AppDependencyManager.shared.add(dependency: FamilyStoreAccess { await AppModel.shared.loadedStore() })
@@ -117,6 +120,9 @@ final class AppModel {
       nudges?.plan()
       observe(store)
       phase = .ready(store)
+      #if DEBUG
+        if initializesCloudKitSchema, mode == .normal { fillCloudKitSchema(of: store) }
+      #endif
       return store
     } catch {
       Self.logger.error("The family store did not load: \(String(describing: error), privacy: .public)")
@@ -124,6 +130,25 @@ final class AppModel {
       return nil
     }
   }
+
+  #if DEBUG
+    /// Fills the development CloudKit schema from the model, once, off the main actor (ADR 0011).
+    /// One call covers the private and the shared store: record types belong to the container.
+    /// A Release build has no code for it. Theo reads the result in the Xcode console.
+    private func fillCloudKitSchema(of store: FamilyStore) {
+      nonisolated(unsafe) let container = store.container
+      Task.detached(priority: .utility) {
+        Self.logger.info("Initializing the CloudKit schema")
+        do {
+          try container.initializeCloudKitSchema(options: [])
+          Self.logger.info("The CloudKit schema is initialized")
+        } catch {
+          Self.logger.error(
+            "The CloudKit schema did not initialize: \(String(describing: error), privacy: .public)")
+        }
+      }
+    }
+  #endif
 
   /// The timers and the nudges follow the store.
   private func storeChanged() {

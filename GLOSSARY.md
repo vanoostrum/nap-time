@@ -133,7 +133,7 @@ The `CFBundleVersion` of a release: the run number of its `Release` workflow run
 _Avoid_: version, build ID
 
 **Release tag**:
-The git tag `release/<build number>` on the commit of each release that uploaded. The schema check of the next release compares the Core Data model against the newest one from a run that had the check.
+The git tag `release/<build number>` on the commit of each release that uploaded. A run that had the schema check pushes it as an annotated tag whose message holds the line `schema-check: yes`. The schema check of the next release compares the Core Data model with the marked tag that has the highest build number.
 _Avoid_: version tag
 
 **Schema deploy**:

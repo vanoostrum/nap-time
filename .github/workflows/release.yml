@@ -5,6 +5,11 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      schema_deployed:
+        description: I deployed the CloudKit schema to production after the last model change (ADR 0011).
+        type: boolean
+        default: false
 
 # One release at a time. A second run waits, and is never cancelled.
 concurrency:
@@ -15,8 +20,27 @@ permissions:
   contents: read
 
 jobs:
+  # Runs before the approval, so a forgotten tick fails at once and never asks Theo to approve (ADR 0011).
+  schema:
+    name: Check the CloudKit schema
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      # Every commit and every tag, so the check finds the release tags.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Fail when the model changed and the schema is not deployed
+        env:
+          SCHEMA_DEPLOYED: ${{ inputs.schema_deployed }}
+        run: python3 scripts/schema_check.py
+
   release:
     name: Release to TestFlight
+    needs: schema
     # Only from main, on top of the branch rule of `testflight`. From another branch, nothing asks for approval.
     if: github.ref == 'refs/heads/main'
     environment: testflight
@@ -82,6 +106,13 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v5
-      # A lightweight tag on the run's commit. Pushing the same tag to the same commit again succeeds.
+      # An annotated tag on the run's commit. The line `schema-check: yes` marks it for the schema check of the next
+      # release. A runner has no git identity, so the job sets one. Each `git tag -a` makes a new tag object, so a
+      # re-run fails when this tag already reached GitHub; a failed push leaves none there.
       - name: Push the tag release/<build number>
-        run: git push origin "$GITHUB_SHA:refs/tags/release/$GITHUB_RUN_NUMBER"
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "release/$GITHUB_RUN_NUMBER" "$GITHUB_SHA" -m "Release $GITHUB_RUN_NUMBER" -m "schema-check: yes"
+          git push origin "refs/tags/release/$GITHUB_RUN_NUMBER"

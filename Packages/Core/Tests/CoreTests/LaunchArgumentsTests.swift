@@ -14,6 +14,18 @@ import Testing
     #expect(mode.areAnimationsEnabled)
   }
 
+  @Test func initCloudKitSchemaIsOnOnlyWithTheArgumentAndWithoutTestMode() {
+    #expect(LaunchArguments.initCloudKitSchema == "--init-cloudkit-schema")
+    #expect(LaunchArguments.initializesCloudKitSchema([executable, "--init-cloudkit-schema"]))
+    #expect(!LaunchArguments.initializesCloudKitSchema([executable]))
+    #expect(!LaunchArguments.initializesCloudKitSchema([executable, "--init-cloudkit-schema", "--test-mode"]))
+    #expect(!LaunchArguments.initializesCloudKitSchema([executable, "--test-mode", "--init-cloudkit-schema"]))
+  }
+
+  @Test func initCloudKitSchemaDoesNotChangeTheMode() throws {
+    #expect(try LaunchArguments.parse([executable, "--init-cloudkit-schema"]) == .normal)
+  }
+
   @Test func nowWithoutTestModeIsIgnoredEvenWhenBad() throws {
     let mode = try LaunchArguments.parse([executable, "--now", "yesterday"])
     #expect(mode == .normal)
