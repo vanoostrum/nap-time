@@ -4,7 +4,8 @@
 Usage:
   scripts/release_check.py archive <NapTime.xcarchive> [--build N] [--signed]
       The app's version is MARKETING_VERSION in project.yml, the widget has the app's version and build
-      number, ITSAppUsesNonExemptEncryption is false, and the primary icon is AppIcon. `App (iOS)` and `Release`.
+      number, ITSAppUsesNonExemptEncryption is false, the primary icon is AppIcon, and an app with fewer than all
+      four orientations sets UIRequiresFullScreen. `App (iOS)` and `Release`.
       With --signed, also the entitlements that the ad-hoc signature carries into the export. macOS only.
   scripts/release_check.py entitlements <NapTime.ipa>
       The signed entitlements of the app and the widget are the ones for production. macOS only: reads
@@ -45,6 +46,12 @@ APP_ENTITLEMENTS = {
 WIDGET_ENTITLEMENTS = {"com.apple.security.application-groups": GROUP, "get-task-allow": False}
 
 MISSING = object()
+ORIENTATIONS = {
+    "UIInterfaceOrientationPortrait",
+    "UIInterfaceOrientationPortraitUpsideDown",
+    "UIInterfaceOrientationLandscapeLeft",
+    "UIInterfaceOrientationLandscapeRight",
+}
 
 
 def compare(bundle, actual, expected):
@@ -77,6 +84,14 @@ def check_archive(app_info, widget_info, version, build=None):
         errors.append(f"{APP}: CFBundleIcons.CFBundlePrimaryIcon.CFBundleIconName is missing, expected 'AppIcon'")
     elif icon != "AppIcon":
         errors.append(f"{APP}: CFBundleIcons.CFBundlePrimaryIcon.CFBundleIconName is {icon!r}, expected 'AppIcon'")
+    # App Store Connect rejects an app with fewer than all four orientations unless it requires full screen
+    # (error 90474, for iPad multitasking). Release run 3 found this only at the upload.
+    orientations = app_info.get("UISupportedInterfaceOrientations", [])
+    if set(orientations) != ORIENTATIONS and app_info.get("UIRequiresFullScreen") is not True:
+        errors.append(
+            f"{APP}: UISupportedInterfaceOrientations is {orientations!r}, so UIRequiresFullScreen must be True,"
+            f" but it is {app_info.get('UIRequiresFullScreen', 'missing')!r}"
+        )
     # The widget must ship with the app's version and build number, or App Store Connect rejects the upload.
     widget_expected = {"CFBundleShortVersionString": version}
     app_build = build if build is not None else app_info.get("CFBundleVersion")

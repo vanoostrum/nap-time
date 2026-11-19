@@ -46,6 +46,8 @@ targets:
         # The partner's changes arrive in the background through CloudKit pushes.
         UIBackgroundModes: [remote-notification]
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        # Portrait only, so App Store Connect needs this, or it rejects the upload (error 90474, CRAFT-76).
+        UIRequiresFullScreen: true
         # The app uses only the encryption of iOS, so TestFlight asks no export question (CRAFT-76).
         ITSAppUsesNonExemptEncryption: false
     entitlements:
