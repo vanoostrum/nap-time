@@ -621,3 +621,32 @@ a.danger { text-decoration: none; }
   height: 52px; padding: 0 24px; border-radius: 999px; border: 0;
   background: var(--gold); color: var(--night-sky-mid); font-size: 21px; font-weight: 800;
 }
+
+/* ---------- App icon (rough, CRAFT-75 plan; the icon ticket settles it) ---------- */
+
+.screen.home-screen { background: var(--dawn); justify-content: center; gap: 48px; }
+
+.app-icon {
+  position: relative;
+  overflow: hidden;
+  width: var(--icon-size, 60px);
+  height: var(--icon-size, 60px);
+  border-radius: calc(var(--icon-size, 60px) * 0.225);
+  background: linear-gradient(180deg, var(--night-sky-top) 0%, var(--night-sky-mid) 50%, var(--night-sky-low) 100%);
+  box-shadow: 0 8px 24px rgba(10, 25, 50, 0.35);
+}
+.app-icon .icon-moon {
+  position: absolute;
+  right: 10%; top: 12%; width: 64%; height: 64%;
+  fill: var(--moon);
+}
+.app-icon .icon-star { position: absolute; fill: var(--star); }
+.app-icon .icon-star.one { left: 10%; top: 14%; width: 22%; height: 22%; }
+.app-icon .icon-star.two { left: 20%; top: 58%; width: 14%; height: 14%; }
+
+.icon-preview { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--white); }
+.icon-preview p { font-size: 15px; opacity: 0.9; }
+
+.home-row { display: flex; gap: 28px; }
+.home-app { display: flex; flex-direction: column; align-items: center; gap: 6px; text-decoration: none; color: var(--navy); font-size: 12px; font-weight: 600; }
+.home-app.other .app-icon { background: rgba(255, 255, 255, 0.35); box-shadow: none; }

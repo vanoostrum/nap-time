@@ -113,3 +113,29 @@ _Avoid_: day details, popup, modal
 **Sleep timer**:
 The Live Activity that counts a running sleep from its start, on the Lock Screen and in the Dynamic Island, with an "Awake" button. Only the phone that tapped "Sleep time" shows it. A night's timer shows from 04:00.
 _Avoid_: Live Activity view, widget, stopwatch, countdown
+
+### Release
+
+**Staging**:
+A Debug build that Theo installs from Xcode on his own iPhone. It uses the CloudKit development database. The agents do not reach it.
+_Avoid_: dev build, beta
+
+**Production**:
+The Release build in TestFlight internal testing, on the phones of Theo and Theo's wife. It uses the CloudKit production database and holds the family's real sleep log.
+_Avoid_: live, App Store
+
+**Release**:
+One run of the `Release` workflow: it archives `main`, signs it, uploads it to App Store Connect, and tags the commit. Theo starts it by hand and approves it in the GitHub environment `testflight`. A merge to `main` is not a release.
+_Avoid_: deploy, ship, publish
+
+**Build number**:
+The `CFBundleVersion` of a release: the run number of its `Release` workflow run.
+_Avoid_: version, build ID
+
+**Release tag**:
+The git tag `release/<build number>` on the commit of each release that uploaded. The schema check of the next release compares the Core Data model against the newest one from a run that had the check.
+_Avoid_: version tag
+
+**Schema deploy**:
+Theo's step in the CloudKit Console that copies the development schema to production. It comes before each release that changes the Core Data model.
+_Avoid_: migration, schema push
