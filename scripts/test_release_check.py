@@ -32,6 +32,8 @@ def app_info(**changes):
         "CFBundleVersion": "42",
         "ITSAppUsesNonExemptEncryption": False,
         "CFBundleIcons": {"CFBundlePrimaryIcon": {"CFBundleIconName": "AppIcon"}},
+        "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"],
+        "UIRequiresFullScreen": True,
     }
     info.update(changes)
     return {k: v for k, v in info.items() if v is not None}
@@ -118,6 +120,25 @@ class ArchiveTests(unittest.TestCase):
                 errors = check_archive(app, widget, "1.0.0", "42")
                 self.assertTrue(errors)
                 self.assertTrue(any(key in e for e in errors), errors)
+
+    def test_fewer_than_four_orientations_need_full_screen(self):
+        # App Store Connect rejects such an upload with error 90474 (Release run 3).
+        for value in [None, False]:
+            with self.subTest(UIRequiresFullScreen=value):
+                errors = check_archive(app_info(UIRequiresFullScreen=value), widget_info(), "1.0.0", "42")
+                self.assertEqual(len(errors), 1, errors)
+                self.assertIn("UIRequiresFullScreen", errors[0])
+                self.assertIn("UIInterfaceOrientationPortrait", errors[0])
+
+    def test_all_four_orientations_need_no_full_screen(self):
+        every = [
+            "UIInterfaceOrientationPortrait",
+            "UIInterfaceOrientationPortraitUpsideDown",
+            "UIInterfaceOrientationLandscapeLeft",
+            "UIInterfaceOrientationLandscapeRight",
+        ]
+        info = app_info(UISupportedInterfaceOrientations=every, UIRequiresFullScreen=None)
+        self.assertEqual(check_archive(info, widget_info(), "1.0.0", "42"), [])
 
     def test_a_widget_error_names_the_widget(self):
         errors = check_archive(app_info(), widget_info(CFBundleVersion="1"), "1.0.0", "42")
