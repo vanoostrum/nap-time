@@ -301,6 +301,53 @@ class IconTests(unittest.TestCase):
         with contextlib.redirect_stdout(out):
             self.assertEqual(main(["icon"]), 0)
 
+    def test_the_committed_icon_is_the_settled_icon(self):
+        # The placeholder has sky at the moon's point, so this fails until the settled icon is committed.
+        pixel = rgb_pixels(committed_icon(REPO))
+        for name, point, expected in [("moon", (358, 614), (0xE9, 0xC7, 0x7B)), ("sky", (20, 20), (0x07, 0x0B, 0x24))]:
+            with self.subTest(name):
+                actual = pixel(*point)
+                self.assertTrue(
+                    all(abs(a - e) <= 12 for a, e in zip(actual, expected)),
+                    f"{name} at {point} is #{bytes(actual).hex()}, expected near #{bytes(expected).hex()}",
+                )
+
+
+def rgb_pixels(path):
+    """Decode an 8-bit RGB PNG without interlace, and return a function from (x, y) to (r, g, b)."""
+    data = pathlib.Path(path).read_bytes()
+    offset, idat = 8, b""
+    while offset < len(data):
+        length, kind = struct.unpack(">I4s", data[offset : offset + 8])
+        body = data[offset + 8 : offset + 8 + length]
+        if kind == b"IHDR":
+            width, height, depth, colour_type, _, _, interlace = struct.unpack(">IIBBBBB", body)
+            assert (depth, colour_type, interlace) == (8, 2, 0), "expected 8-bit RGB without interlace"
+        elif kind == b"IDAT":
+            idat += body
+        offset += 12 + length
+    raw, stride = zlib.decompress(idat), width * 3
+    rows, previous = [], bytearray(stride)
+    for y in range(height):
+        start = y * (stride + 1)
+        kind, row = raw[start], bytearray(raw[start + 1 : start + 1 + stride])
+        for i in range(stride):
+            left = row[i - 3] if i >= 3 else 0
+            up, up_left = previous[i], previous[i - 3] if i >= 3 else 0
+            if kind == 1:
+                row[i] = (row[i] + left) & 0xFF
+            elif kind == 2:
+                row[i] = (row[i] + up) & 0xFF
+            elif kind == 3:
+                row[i] = (row[i] + (left + up) // 2) & 0xFF
+            elif kind == 4:
+                p = left + up - up_left
+                pa, pb, pc = abs(p - left), abs(p - up), abs(p - up_left)
+                row[i] = (row[i] + (left if pa <= pb and pa <= pc else up if pb <= pc else up_left)) & 0xFF
+        rows.append(row)
+        previous = row
+    return lambda x, y: tuple(rows[y][x * 3 : x * 3 + 3])
+
 
 if __name__ == "__main__":
     unittest.main()

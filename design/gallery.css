@@ -635,14 +635,13 @@ a.danger { text-decoration: none; }
   background: linear-gradient(180deg, var(--night-sky-top) 0%, var(--night-sky-mid) 50%, var(--night-sky-low) 100%);
   box-shadow: 0 8px 24px rgba(10, 25, 50, 0.35);
 }
-.app-icon .icon-moon {
-  position: absolute;
-  right: 10%; top: 12%; width: 64%; height: 64%;
-  fill: var(--moon);
-}
-.app-icon .icon-star { position: absolute; fill: var(--star); }
-.app-icon .icon-star.one { left: 10%; top: 14%; width: 22%; height: 22%; }
-.app-icon .icon-star.two { left: 20%; top: 58%; width: 14%; height: 14%; }
+.app-icon .icon-art { position: absolute; inset: 0; width: 100%; height: 100%; }
+.icon-art .icon-glow { fill: var(--moon); opacity: 0.45; }
+.icon-art .mask-keep { fill: #ffffff; }
+.icon-art .mask-bite { fill: #000000; }
+.icon-art .icon-moon { fill: var(--moon); }
+.icon-art .icon-star { fill: var(--star); stroke: var(--star); stroke-width: 2.4; stroke-linejoin: round; }
+.icon-art .icon-dot { fill: var(--star); }
 
 .icon-preview { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--white); }
 .icon-preview p { font-size: 15px; opacity: 0.9; }
