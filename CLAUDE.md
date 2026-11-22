@@ -64,8 +64,8 @@ A merge deploys nothing. The workflow `Release` (`.github/workflows/release.yml`
 
 **The CloudKit schema.** The Core Data model only grows: a change only adds entities or optional attributes (ADR 0011). Before a release that changes the model:
 
-1. Run a Debug build from Xcode on your phone with the launch argument `--init-cloudkit-schema`. The Xcode console shows "The CloudKit schema is initialized".
-2. In the CloudKit Console, open `iCloud.nl.clearblocks.naptime`. Check that the development schema has the record types `CD_Child` and `CD_Sleep` with all fields. Click "Deploy Schema Changes".
+1. Run a Debug build from Xcode on your phone with the launch argument `--init-cloudkit-schema`. The Xcode console shows "The CloudKit schema is initialized". The run also saves and deletes a throwaway share, so the record type `cloudkit.share` is in the development schema. Then delete Nap Time from the phone and install it again from TestFlight, because the Debug run replaced the TestFlight app.
+2. In the CloudKit Console, open `iCloud.nl.clearblocks.naptime`. Check that the development schema has the record types `CD_Child` and `CD_Sleep` with all fields, and `cloudkit.share`. Click "Deploy Schema Changes".
 3. Start `Release` with `schema_deployed` ticked.
 
 The job `schema` fails before the approval when the tick is missing and the model changed since the newest release tag with `schema-check: yes`, or when no release tag has that line.

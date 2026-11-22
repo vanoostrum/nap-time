@@ -134,6 +134,7 @@ final class AppModel {
   #if DEBUG
     /// Fills the development CloudKit schema from the model, once, off the main actor (ADR 0011).
     /// One call covers the private and the shared store: record types belong to the container.
+    /// Then it adds the record type `cloudkit.share`, which the model call does not add (CRAFT-81).
     /// A Release build has no code for it. Theo reads the result in the Xcode console.
     private func fillCloudKitSchema(of store: FamilyStore) {
       nonisolated(unsafe) let container = store.container
@@ -141,12 +142,42 @@ final class AppModel {
         Self.logger.info("Initializing the CloudKit schema")
         do {
           try container.initializeCloudKitSchema(options: [])
-          Self.logger.info("The CloudKit schema is initialized")
         } catch {
           Self.logger.error(
             "The CloudKit schema did not initialize: \(String(describing: error), privacy: .public)")
+          return
+        }
+        if await Self.addShareRecordType() {
+          Self.logger.info("The CloudKit schema is initialized")
         }
       }
+    }
+
+    /// Saves a throwaway zone-wide share in its own zone `SchemaInit` of the private database, then deletes the zone,
+    /// which deletes the share. CloudKit adds `cloudkit.share` to the development schema only when a share is saved.
+    /// It never touches the Core Data zones. Returns true when the share was saved.
+    private nonisolated static func addShareRecordType() async -> Bool {
+      let database = CKContainer(identifier: FamilyStore.cloudKitContainerIdentifier).privateCloudDatabase
+      let zone = CKRecordZone(zoneName: "SchemaInit")
+      var shareSaved = false
+      do {
+        // Saving a zone that an earlier, stopped run left behind succeeds too.
+        let zones = try await database.modifyRecordZones(saving: [zone], deleting: [])
+        _ = try zones.saveResults[zone.zoneID]?.get()
+        let share = CKShare(recordZoneID: zone.zoneID)
+        let records = try await database.modifyRecords(saving: [share], deleting: [])
+        _ = try records.saveResults[share.recordID]?.get()
+        shareSaved = true
+      } catch {
+        logger.error("The share record type was not added: \(String(describing: error), privacy: .public)")
+      }
+      do {
+        let zones = try await database.modifyRecordZones(saving: [], deleting: [zone.zoneID])
+        try zones.deleteResults[zone.zoneID]?.get()
+      } catch {
+        logger.error("The zone SchemaInit was not deleted: \(String(describing: error), privacy: .public)")
+      }
+      return shareSaved
     }
   #endif
 
