@@ -105,12 +105,13 @@ import Testing
 
   // MARK: Status
 
-  @Test func aRunningNightShowsItsWholeDurationAndTheNightSky() {
+  /// At 21:56 on 21 June the sunset phase runs, and a running night follows the sun.
+  @Test func aRunningNightShowsItsWholeDurationAndTheSkyOfTheSun() {
     let status = ChildStatus(
       sleeps: [sleep("2026-06-21T19:42:00+02:00", nil, kind: .night), lastNight],
       now: date("2026-06-21T21:56:00+02:00"), in: amsterdam)
     #expect(status.isSleeping)
-    #expect(status.sky == .night)
+    #expect(status.sky == .sunset)
     #expect(status.line == "2 h 14 m · since 19:42")
     #expect(status.heading(name: "Mila") == "Mila is sleeping")
   }
