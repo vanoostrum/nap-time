@@ -29,7 +29,7 @@ final class SleepTimerController {
     reconcile()
   }
 
-  /// "Sleep time": requests the timer of the child's running sleep. It requests none when the child already has a
+  /// "Sleep time" or "Nap time": requests the timer of the child's running sleep. It requests none when the child already has a
   /// pending or showing timer for that sleep, so a double tap gives one timer.
   func requestTimer(for childID: Child.ID) {
     guard isEnabled, let sleep = store.sleeps(of: childID).first(where: \.isRunning),

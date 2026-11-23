@@ -33,6 +33,14 @@ public enum SleepKind: String, CaseIterable, Codable, Sendable {
     let hour = Calendar.gregorian(in: timeZone).component(.hour, from: start)
     return hour >= 18 || hour < 6 ? .night : .nap
   }
+
+  /// The main button's text while the child is awake: what a tap starts.
+  public var startTitle: String {
+    switch self {
+    case .night: "Sleep time"
+    case .nap: "Nap time"
+    }
+  }
 }
 
 /// The time from 18:00 on one date to 18:00 on the next, named after the second date (ADR 0006).
