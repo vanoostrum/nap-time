@@ -131,12 +131,12 @@ final class EntryPointTests: XCTestCase {
     driver.attachScreenshot("joined", to: self)
   }
 
-  /// `home-sleeping`: Mila sleeps a night since 19:42, at 21:56. Page `home/night.html`.
+  /// `home-sleeping`: Mila sleeps a night since 19:42, at 23:30, so the night sky shows. Page `home/night.html`.
   @MainActor
   func testHomeSleeping() throws {
-    let driver = AppDriver.launch(seed: "sleeping", now: "2026-06-21T21:56:00+02:00")
+    let driver = AppDriver.launch(seed: "sleeping", now: "2026-06-21T23:30:00+02:00")
     driver.waitFor(driver.text("Mila is sleeping"))
-    XCTAssertTrue(driver.text("2 h 14 m · since 19:42").exists)
+    XCTAssertTrue(driver.text("3 h 48 m · since 19:42").exists)
     XCTAssertTrue(driver.button("Wake up").exists)
     XCTAssertTrue(driver.button("Woke earlier? Set the time").exists)
     driver.waitForSky("night")

@@ -8,7 +8,8 @@ public enum Seed: String, CaseIterable, Sendable {
   case family
   /// One child with a name of 30 characters.
   case longName = "long-name"
-  /// `family`, and Mila sleeps a night since 21 June 2026 19:42. Pass `--now 2026-06-21T21:56:00+02:00`.
+  /// `family`, and Mila sleeps a night since 21 June 2026 19:42. Pass `--now 2026-06-21T21:56:00+02:00` (sunset)
+  /// or `--now 2026-06-21T23:30:00+02:00` (night).
   case sleeping
   /// `family`, and Mila naps since 21 June 2026 13:05. Pass `--now 2026-06-21T13:50:00+02:00`.
   case napping
