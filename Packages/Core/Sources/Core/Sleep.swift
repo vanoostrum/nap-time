@@ -107,15 +107,14 @@ public struct ChildStatus: Equatable, Sendable {
 
   /// `sleeps` are the sleeps of one child.
   public init(sleeps: [Sleep], now: Date, in timeZone: TimeZone) {
+    sky = SkyPhase(at: now, in: timeZone)
     if let running = sleeps.first(where: \.isRunning) {
       isSleeping = true
-      sky = SkyPhase(at: now, in: timeZone, running: running.kind)
       let duration = SleepDuration.text(now.timeIntervalSince(running.start))
       line = "\(duration) · since \(ClockTime.text(running.start, in: timeZone))"
       return
     }
     isSleeping = false
-    sky = SkyPhase(at: now, in: timeZone)
     let total = "\(SleepDuration.text(SleptToday.total(of: sleeps, now: now, in: timeZone))) slept today"
     if let lastEnd = sleeps.compactMap(\.end).max(), now.timeIntervalSince(lastEnd) < 24 * 3600 {
       line = "since \(ClockTime.text(lastEnd, in: timeZone)) · \(total)"

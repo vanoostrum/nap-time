@@ -43,7 +43,8 @@ final class SleepEditFlowTests: XCTestCase {
     sleeping.button("cancel").tap()
     sleeping.waitForFormToClose()
     sleeping.waitFor(sleeping.text("2 h 14 m · since 19:42"))
-    sleeping.waitForSky("night")
+    // A running night follows the sun: sunset at 21:56 on 21 June.
+    sleeping.waitForSky("sunset")
   }
 
   /// Saving Edit sleep with another type changes the sleep: it opens again as a nap.

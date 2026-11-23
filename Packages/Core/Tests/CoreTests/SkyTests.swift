@@ -73,38 +73,76 @@ import Testing
 
   // MARK: Running sleeps
 
-  @Test func aRunningNightIsNightAtAnyTime() {
-    let instants = [
-      "2026-06-21T12:00:00+02:00", "2026-06-21T05:25:00+02:00", "2026-06-21T06:55:00+02:00",
-      "2026-06-21T22:05:00+02:00", "2026-12-21T21:00:00+01:00",
-    ]
-    for instant in instants {
-      #expect(SkyPhase(at: date(instant), in: amsterdam, running: .night) == .night)
+  private func night(from start: String) -> Sleep {
+    Sleep(id: UUID(), childID: UUID(), start: date(start), end: nil, kind: .night)
+  }
+
+  private func sky(_ sleeps: [Sleep], at instant: String) -> SkyPhase {
+    ChildStatus(sleeps: sleeps, now: date(instant), in: amsterdam).sky
+  }
+
+  /// Criterion 1, review focus 1 and 4: a night that started the evening before shows sunrise at sunrise,
+  /// also on the mornings the clock changes.
+  @Test(arguments: [
+    ("2026-11-14T19:48:00+01:00", "2026-11-15T08:00:00+01:00"),
+    ("2026-03-28T19:45:00+01:00", "2026-03-29T07:22:00+02:00"),
+    ("2026-10-24T19:45:00+02:00", "2026-10-25T07:22:00+01:00"),
+  ])
+  func aRunningNightShowsSunriseAtSunrise(start: String, now: String) {
+    #expect(sky([night(from: start)], at: now) == .sunrise)
+  }
+
+  /// Criterion 2, review focus 2: after sunrise plus 30 minutes, a running night shows the day sky.
+  @Test func aRunningNightShowsDayAfterSunrise() {
+    #expect(sky([night(from: "2026-11-14T19:48:00+01:00")], at: "2026-11-15T09:00:00+01:00") == .day)
+  }
+
+  /// Criterion 3, review focus 3: in the evening and the night, a running night shows sunset, then night.
+  @Test(arguments: [
+    ("2026-06-21T19:42:00+02:00", "2026-06-21T21:56:00+02:00", SkyPhase.sunset),
+    ("2026-06-21T19:42:00+02:00", "2026-06-21T23:30:00+02:00", .night),
+    ("2026-06-21T19:42:00+02:00", "2026-06-22T03:00:00+02:00", .night),
+    ("2026-12-21T19:30:00+01:00", "2026-12-21T21:00:00+01:00", .night),
+  ])
+  func aRunningNightInTheEveningAndTheNight(start: String, now: String, expected: SkyPhase) {
+    #expect(sky([night(from: start)], at: now) == expected)
+  }
+
+  /// Criterion 4, review focus 5: a running night, a running nap, and no running sleep show the same sky,
+  /// the sky of the sun at `now`.
+  @Test func theSkyIsTheSameWithAndWithoutARunningSleep() {
+    var instant = date("2026-03-28T00:10:00+01:00")
+    let end = date("2026-03-30T00:00:00+02:00")
+    let start = date("2026-03-27T19:00:00+01:00")
+    let nap = Sleep(id: UUID(), childID: UUID(), start: start, end: nil, kind: .nap)
+    let night = Sleep(id: UUID(), childID: UUID(), start: start, end: nil, kind: .night)
+    while instant < end {
+      let sun = SkyPhase(at: instant, in: amsterdam)
+      #expect(ChildStatus(sleeps: [night], now: instant, in: amsterdam).sky == sun)
+      #expect(ChildStatus(sleeps: [nap], now: instant, in: amsterdam).sky == sun)
+      #expect(ChildStatus(sleeps: [], now: instant, in: amsterdam).sky == sun)
+      instant += 10 * 60
     }
   }
 
   @Test func aRunningNapFollowsTheSun() {
-    for instant in ["2026-06-21T22:05:00+02:00", "2026-06-21T13:50:00+02:00", "2026-12-21T16:30:00+01:00"] {
-      let at = date(instant)
-      #expect(SkyPhase(at: at, in: amsterdam, running: .nap) == SkyPhase(at: at, in: amsterdam))
-    }
-    #expect(SkyPhase(at: date("2026-12-21T16:30:00+01:00"), in: amsterdam, running: .nap) == .sunset)
+    let nap = Sleep(
+      id: UUID(), childID: UUID(), start: date("2026-12-21T16:00:00+01:00"), end: nil, kind: .nap)
+    #expect(sky([nap], at: "2026-12-21T16:30:00+01:00") == .sunset)
   }
 
-  /// Review focus 5: at 21:00 in December, a child with no sleep and a child with a running night both see night.
+  /// At 21:00 in December, a child with no sleep and a child with a running night both see night.
   @Test func nineInTheEveningInDecemberIsNight() {
-    let at = date("2026-12-21T21:00:00+01:00")
-    #expect(SkyPhase(at: at, in: amsterdam) == .night)
-    #expect(SkyPhase(at: at, in: amsterdam, running: .night) == .night)
+    #expect(sky([], at: "2026-12-21T21:00:00+01:00") == .night)
+    #expect(sky([night(from: "2026-12-21T19:30:00+01:00")], at: "2026-12-21T21:00:00+01:00") == .night)
   }
 
-  /// Review focus 2: a night that runs after sunrise shows night, and the sky after "Wake up" follows the sun.
+  /// A night that runs after sunrise shows the day sky, and "Wake up" does not change the sky.
   @Test func theSkyAfterANightThatRanPastSunrise() {
-    let night = Sleep(
-      id: UUID(), childID: UUID(), start: date("2026-06-20T19:45:00+02:00"), end: nil, kind: .night)
+    let running = night(from: "2026-06-20T19:45:00+02:00")
     let now = date("2026-06-21T06:55:00+02:00")
-    #expect(ChildStatus(sleeps: [night], now: now, in: amsterdam).sky == .night)
-    var ended = night
+    #expect(ChildStatus(sleeps: [running], now: now, in: amsterdam).sky == .day)
+    var ended = running
     ended.end = now
     #expect(ChildStatus(sleeps: [ended], now: now, in: amsterdam).sky == .day)
     #expect(ChildStatus(sleeps: [ended], now: date("2026-06-21T05:30:00+02:00"), in: amsterdam).sky == .sunrise)

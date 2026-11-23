@@ -95,12 +95,8 @@ public enum SkyPhase: String, CaseIterable, Sendable {
   /// How long before and after the sun time sunrise and sunset last.
   public static let halfWidth: TimeInterval = 30 * 60
 
-  /// The sky at `instant` in `timeZone`. A running night shows the night sky; a running nap follows the sun.
-  public init(at instant: Date, in timeZone: TimeZone, running: SleepKind? = nil) {
-    if running == .night {
-      self = .night
-      return
-    }
+  /// The sky at `instant` in `timeZone`, from the sun times of Utrecht. A running sleep does not change it.
+  public init(at instant: Date, in timeZone: TimeZone) {
     let sun = SunTimes(on: BirthDate(instant, in: Calendar.gregorian(in: timeZone)))
     self =
       switch instant {
@@ -112,7 +108,7 @@ public enum SkyPhase: String, CaseIterable, Sendable {
       }
   }
 
-  /// The first phase edge after `instant` in `timeZone`, for a child with no running night:
+  /// The first phase edge after `instant` in `timeZone`:
   /// sunrise or sunset, minus or plus 30 minutes.
   public static func nextChange(after instant: Date, in timeZone: TimeZone) -> Date {
     let today = BirthDate(instant, in: Calendar.gregorian(in: timeZone))

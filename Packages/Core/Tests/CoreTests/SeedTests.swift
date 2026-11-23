@@ -134,7 +134,7 @@ import Testing
   /// What the home screen shows for Mila with each seed at the time its UI test passes.
   @Test(arguments: [
     (Seed.family, "2026-06-21T10:00:00+02:00", "Mila is awake", "since 06:55 · 11 h 10 m slept today", SkyPhase.day),
-    (.sleeping, "2026-06-21T21:56:00+02:00", "Mila is sleeping", "2 h 14 m · since 19:42", .night),
+    (.sleeping, "2026-06-21T23:30:00+02:00", "Mila is sleeping", "3 h 48 m · since 19:42", .night),
     (.napping, "2026-06-21T13:50:00+02:00", "Mila is sleeping", "45 m · since 13:05", .day),
     (.evening, "2026-06-21T22:05:00+02:00", "Mila is awake", "since 15:10 · 12 h 05 m slept today", .sunset),
     (.evening, "2026-06-21T23:30:00+02:00", "Mila is awake", "since 15:10 · 12 h 05 m slept today", .night),
