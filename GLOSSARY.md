@@ -99,7 +99,7 @@ _Avoid_: alert, reminder, push
 ### Screens
 
 **Sky**:
-The background of the home screen. It shows day, sunset, night, or sunrise from the sun times of Utrecht, and night while the selected child's night runs.
+The background of the home screen. It shows day, sunset, night, or sunrise from the sun times of Utrecht, also while a sleep runs.
 _Avoid_: theme, mode, background
 
 **Timeline**:
