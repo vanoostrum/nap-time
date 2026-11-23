@@ -27,6 +27,32 @@ import Testing
     #expect(SleepKind.guess(start: instant, in: utc) == .nap)
   }
 
+  // MARK: Main button title
+
+  @Test func aNapStartsWithNapTimeAndANightWithSleepTime() {
+    #expect(SleepKind.nap.startTitle == "Nap time")
+    #expect(SleepKind.night.startTitle == "Sleep time")
+  }
+
+  // Summer time starts at 02:00 on 29 March 2026 and ends at 03:00 on 25 October 2026.
+  @Test(arguments: [
+    ("2026-06-21T05:59:00+02:00", "Sleep time"),
+    ("2026-06-21T06:00:00+02:00", "Nap time"),
+    ("2026-06-21T17:59:00+02:00", "Nap time"),
+    ("2026-06-21T18:00:00+02:00", "Sleep time"),
+    ("2026-03-29T05:59:00+02:00", "Sleep time"),
+    ("2026-03-29T06:00:00+02:00", "Nap time"),
+    ("2026-03-29T17:59:00+02:00", "Nap time"),
+    ("2026-03-29T18:00:00+02:00", "Sleep time"),
+    ("2026-10-25T05:59:00+01:00", "Sleep time"),
+    ("2026-10-25T06:00:00+01:00", "Nap time"),
+    ("2026-10-25T17:59:00+01:00", "Nap time"),
+    ("2026-10-25T18:00:00+01:00", "Sleep time"),
+  ])
+  func theMainButtonSaysNapTimeFrom06To1759(now: String, title: String) {
+    #expect(SleepKind.guess(start: date(now), in: amsterdam).startTitle == title)
+  }
+
   // MARK: Sleep day
 
   @Test func aSleepDayIsNamedAfterTheDateItEndsOn() {

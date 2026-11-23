@@ -54,6 +54,10 @@ _Avoid_: day sleep, rest
 A sleep that has started and has not ended yet.
 _Avoid_: active sleep, open sleep, timer
 
+**Main button**:
+The big button on Home. While the child is awake, it says "Nap time" from 06:00 to 17:59 and "Sleep time" from 18:00 to 05:59, and a tap starts that kind of sleep now. While a sleep runs, it says "Wake up".
+_Avoid_: start button, sleep button
+
 ### The week
 
 **Sleep day**:
@@ -111,7 +115,7 @@ The sheet that slides up when a parent taps a sleep day on the charts, as a bar 
 _Avoid_: day details, popup, modal
 
 **Sleep timer**:
-The Live Activity that counts a running sleep from its start, on the Lock Screen and in the Dynamic Island, with an "Awake" button. Only the phone that tapped "Sleep time" shows it. A night's timer shows from 04:00.
+The Live Activity that counts a running sleep from its start, on the Lock Screen and in the Dynamic Island, with an "Awake" button. Only the phone that tapped "Sleep time" or "Nap time" shows it. A night's timer shows from 04:00.
 _Avoid_: Live Activity view, widget, stopwatch, countdown
 
 ### Release

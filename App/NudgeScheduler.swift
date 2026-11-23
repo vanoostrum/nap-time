@@ -30,7 +30,7 @@ final class NudgeScheduler: NSObject {
     }
   }
 
-  /// "Sleep time" and saving a sleep: shows the iPhone's prompt the first time, then plans when the parent allows.
+  /// "Sleep time" or "Nap time", and saving a sleep: shows the iPhone's prompt the first time, then plans when the parent allows.
   func requestPermission() {
     guard isEnabled else { return }
     Task {

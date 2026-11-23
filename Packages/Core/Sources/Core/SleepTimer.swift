@@ -61,7 +61,7 @@ public enum SleepTimerRule {
   /// A child keeps one timer: the one for a running sleep of the child, else the earliest start, then the lowest
   /// sleep id, then the lowest timer id. The others end. A timer follows its own sleep, or else the child's running
   /// sleep that starts at or before the timer's start: the sleep that a merge keeps. With no such sleep it ends.
-  /// A running sleep without a timer gets none: only "Sleep time" asks for a timer.
+  /// A running sleep without a timer gets none: only the main button ("Sleep time" or "Nap time") asks for a timer.
   public static func changes(
     timers: [SleepTimerSnapshot], runningSleeps: [Sleep], now: Date, timeZone: TimeZone
   ) -> [SleepTimerChange] {

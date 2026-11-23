@@ -139,6 +139,8 @@ struct RootView: View {
               children: store.children,
               selectedID: selected,
               status: selected.map { ChildStatus(sleeps: store.sleeps(of: $0), now: now, in: calendar.timeZone) },
+              // The same guess as startSleep, so the title says what a tap starts, and it changes at 06:00 and 18:00.
+              startKind: SleepKind.guess(start: now, in: calendar.timeZone),
               onSelect: { model.select($0) },
               onAdd: { cover = .addAnother },
               onEdit: { cover = .edit($0) },
@@ -229,7 +231,7 @@ struct RootView: View {
     return { cover = .sleep(last.isRunning ? .runningStart(last) : .edit(last)) }
   }
 
-  /// "Sleep time": starts a running sleep now, a night or a nap by the time of day, and requests its sleep timer.
+  /// "Sleep time" or "Nap time": starts a running sleep now, a night or a nap by the time of day, and requests its sleep timer.
   /// The first time, it also shows the iPhone's notification prompt for the nudges.
   private func startSleep(_ childID: Child.ID, store: FamilyStore) {
     let now = fixedNow ?? Date()

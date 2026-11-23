@@ -2,7 +2,7 @@ import Core
 import SwiftUI
 
 /// The home screen: the sky, the child switcher with "+", the selected child with the status line,
-/// "Sleep time" with "Add a sleep from earlier", or "Wake up" with "Woke earlier? Set the time", and the tab bar.
+/// "Nap time" or "Sleep time" with "Add a sleep from earlier", or "Wake up" with "Woke earlier? Set the time", and the tab bar.
 ///
 /// With no children, as while the store loads, it shows only the sky, and `message` when there is one.
 struct HomeView: View {
@@ -10,6 +10,8 @@ struct HomeView: View {
   var selectedID: Child.ID?
   /// The status of the selected child.
   var status: ChildStatus?
+  /// The kind of sleep a tap on the main button starts now. It gives the button's title while the child is awake.
+  var startKind: SleepKind = .night
   var message: String?
   var onSelect: (Child.ID) -> Void = { _ in }
   var onAdd: () -> Void = {}
@@ -27,7 +29,7 @@ struct HomeView: View {
 
   /// Counts taps on the main button, for the haptic tap.
   @State private var mainButtonTaps = 0
-  /// When the main button last took a tap. "Wake up" replaces "Sleep time" in the same place,
+  /// When the main button last took a tap. "Wake up" replaces "Nap time" or "Sleep time" in the same place,
   /// so a fast second tap would end the sleep it just started; such a tap is ignored.
   @State private var lastMainButtonTap = Date.distantPast
 
@@ -179,9 +181,10 @@ struct HomeView: View {
     .id(sleeping)
   }
 
-  /// "Sleep time" while the child is awake, "Wake up" while a sleep runs.
+  /// "Nap time" or "Sleep time" while the child is awake, by `startKind`, and "Wake up" while a sleep runs.
   private func mainButton(_ child: Child, status: ChildStatus) -> some View {
     let sleeping = status.isSleeping
+    let title = sleeping ? "Wake up" : startKind.startTitle
     return Button {
       let now = Date()
       guard now.timeIntervalSince(lastMainButtonTap) >= 0.5 else { return }
@@ -190,7 +193,7 @@ struct HomeView: View {
       sleeping ? onWake() : onSleep()
     } label: {
       Label {
-        Text(sleeping ? "Wake up" : "Sleep time")
+        Text(title)
       } icon: {
         (sleeping ? AnyShape(SunIcon()) : AnyShape(Crescent.outline))
           .stroke(style: StrokeStyle(lineWidth: 4.8, lineCap: .round, lineJoin: .round))
@@ -198,7 +201,7 @@ struct HomeView: View {
     }
     .buttonStyle(MainButtonStyle(gold: colors.goldButton))
     .accessibilityLabel(sleeping ? "\(child.name) woke up" : "\(child.name) fell asleep")
-    .accessibilityIdentifier(sleeping ? "Wake up" : "Sleep time")
+    .accessibilityIdentifier(title)
     .transition(.opacity)
     .id(sleeping)
   }
@@ -277,7 +280,7 @@ struct MainButtonLabelStyle: LabelStyle {
 /// The gallery's crescent moon, in a 24 × 24 box: an outer arc, then an inner arc back to the start.
 ///
 /// The circles come from the SVG arcs of `design/pages/home/night.html` (the sky's moon) and
-/// `design/pages/home/day.html` (the "Sleep time" icon), converted to centers and angles.
+/// `design/pages/home/day.html` (the icon of "Nap time" and "Sleep time"), converted to centers and angles.
 struct Crescent: Shape {
   struct Arc {
     let center: CGPoint
