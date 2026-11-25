@@ -61,7 +61,7 @@ _Avoid_: start button, sleep button
 ### The week
 
 **Sleep day**:
-The time from 18:00 on one date to 18:00 on the next, which is 23 or 25 hours on the day the clock changes. It carries the name of the second date, so a night counts for the morning it ends in.
+The time from 18:00 on one date to 18:00 on the next, which is 23 or 25 hours on the day the clock changes. It carries the name of the second date, so a night that starts after 18:00 counts for the morning it ends in. A sleep belongs to the sleep day it starts in, and counts whole there.
 _Avoid_: calendar day, 24-hour period
 
 **Week**:
@@ -69,7 +69,7 @@ Seven sleep days, from Monday to Sunday.
 _Avoid_: 7 days, rolling week
 
 **Counted day**:
-A sleep day that has ended and has at least one sleep. The average and "In range" use only counted days.
+A sleep day that has ended, holds no running sleep, and has at least one sleep. The average and "In range" use only counted days.
 _Avoid_: logged day, full day
 
 **Recommended range**:
@@ -111,7 +111,7 @@ The chart "When <name> slept": one row per sleep day of the week, from 18:00 to 
 _Avoid_: actogram, sleep graph
 
 **Day sheet**:
-The sheet that slides up when a parent taps a sleep day on the charts, as a bar or a timeline row. It lists the sleeps that cross into that day, with an edit button for each, and "Add a sleep to this day".
+The sheet that slides up when a parent taps a sleep day on the charts, as a bar or a timeline row. It lists the sleeps that start in that day, with an edit button for each, and "Add a sleep to this day".
 _Avoid_: day details, popup, modal
 
 **Sleep timer**:
