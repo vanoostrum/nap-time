@@ -25,6 +25,7 @@ import Testing
     #expect(isClose(segments[1].length, 0.9))
   }
 
+  /// Criterion 8.
   @Test func aSleepAcross1800IsCutIntoAPartOnEachDay() {
     let nap = ended("2026-11-03T17:30:00+01:00", "2026-11-03T18:30:00+01:00")
     let now = date(sundayEvening)
@@ -95,33 +96,65 @@ import Testing
     #expect(sheet.items.map(\.editLabel) == ["Edit night", "Edit nap"])
   }
 
-  /// Review focus 1.
-  @Test func aNapFrom1730To1830ShowsOnBothSheetsWithItsFullTimesAndEachTotalCountsItsPart() {
-    let nap = ended("2026-11-03T17:30:00+01:00", "2026-11-03T18:30:00+01:00")
-    let now = date(sundayEvening)
-    for sleepDay in [tuesday, wednesday] {
-      let sheet = DaySheet(sleepDay: sleepDay, sleeps: [nap], birthDate: mila, now: now, in: amsterdam)
-      #expect(sheet.items.map(\.times) == ["17:30 → 18:30"])
-      #expect(sheet.items.map(\.duration) == ["1 h 00 m"])
-      #expect(sheet.summary == "30 m slept in total")
-    }
+  /// Criterion 1: Theo's Wednesday 25 Nov.
+  @Test func aNapFrom1600To1830CountsWholeSoTheSheetAddsUpTo11h26m() {
+    let night = ended("2026-11-24T22:44:00+01:00", "2026-11-25T07:40:00+01:00", .night)
+    let nap = ended("2026-11-25T16:00:00+01:00", "2026-11-25T18:30:00+01:00")
+    let wednesday25 = SleepDay(named: day(2026, 11, 25))
+    let sheet = DaySheet(
+      sleepDay: wednesday25, sleeps: [nap, night], birthDate: mila, now: date("2026-11-25T21:00:00+01:00"),
+      in: amsterdam)
+    #expect(sheet.items.map(\.duration) == ["8 h 56 m", "2 h 30 m"])
+    #expect(sheet.summary == "11 h 26 m slept in total")
+    #expect(sheet.total == 11 * 3600 + 26 * 60)
+    #expect(sheet.pill == .judgement(.inRange))
   }
 
+  /// Review focus 1, criteria 2 and 3.
+  @Test func aNapFrom1730To1830ShowsWholeOnlyOnTheSheetOfTheDayItStartsIn() {
+    let nap = ended("2026-11-03T17:30:00+01:00", "2026-11-03T18:30:00+01:00")
+    let now = date(sundayEvening)
+    let earlier = DaySheet(sleepDay: tuesday, sleeps: [nap], birthDate: mila, now: now, in: amsterdam)
+    #expect(earlier.items.map(\.times) == ["17:30 → 18:30"])
+    #expect(earlier.items.map(\.duration) == ["1 h 00 m"])
+    #expect(earlier.summary == "1 h 00 m slept in total")
+    let later = DaySheet(sleepDay: wednesday, sleeps: [nap], birthDate: mila, now: now, in: amsterdam)
+    #expect(later.items.isEmpty)
+    #expect(later.summary == "No sleeps logged")
+    #expect(later.pill == nil)
+  }
+
+  /// Criterion 3: a night that starts before 18:00 shows only on the earlier sheet.
+  @Test func aNightFrom1745ShowsOnlyOnTheSheetOfTheDayItStartsIn() {
+    let night = ended("2026-11-03T17:45:00+01:00", "2026-11-04T06:15:00+01:00", .night)
+    let nap = ended("2026-11-04T13:00:00+01:00", "2026-11-04T14:00:00+01:00")
+    let now = date(sundayEvening)
+    #expect(tuesday.sleeps(startingIn: [nap, night], in: amsterdam) == [night])
+    #expect(wednesday.sleeps(startingIn: [nap, night], in: amsterdam) == [nap])
+    let later = DaySheet(sleepDay: wednesday, sleeps: [nap, night], birthDate: mila, now: now, in: amsterdam)
+    #expect(later.items.map(\.sleep) == [nap])
+    #expect(later.summary == "1 h 00 m slept in total")
+  }
+
+  /// Review focus 4.
   @Test func aSleepThatEndsAtExactly1800ShowsOnlyOnTheEarlierDay() {
     let nap = ended("2026-11-03T17:00:00+01:00", "2026-11-03T18:00:00+01:00")
     let now = date(sundayEvening)
-    #expect(tuesday.sleeps(crossingInto: [nap], now: now, in: amsterdam) == [nap])
-    #expect(wednesday.sleeps(crossingInto: [nap], now: now, in: amsterdam).isEmpty)
+    #expect(tuesday.sleeps(startingIn: [nap], in: amsterdam) == [nap])
+    #expect(wednesday.sleeps(startingIn: [nap], in: amsterdam).isEmpty)
     let later = DaySheet(sleepDay: wednesday, sleeps: [nap], birthDate: mila, now: now, in: amsterdam)
     #expect(later.summary == "No sleeps logged")
     #expect(later.pill == nil)
   }
 
+  /// Review focus 4.
   @Test func aSleepThatStartsAtExactly1800ShowsOnlyOnTheLaterDay() {
     let night = ended("2026-11-03T18:00:00+01:00", "2026-11-04T06:00:00+01:00", .night)
-    let now = date(sundayEvening)
-    #expect(tuesday.sleeps(crossingInto: [night], now: now, in: amsterdam).isEmpty)
-    #expect(wednesday.sleeps(crossingInto: [night], now: now, in: amsterdam) == [night])
+    let week = stats(of: [night], now: date(sundayEvening))
+    #expect(tuesday.sleeps(startingIn: [night], in: amsterdam).isEmpty)
+    #expect(wednesday.sleeps(startingIn: [night], in: amsterdam) == [night])
+    #expect(week.days[1].state == .empty)
+    #expect(week.days[2].total == 12 * 3600)
   }
 
   @Test func aPastDayWithNoSleepsHasNoPill() {
@@ -168,6 +201,43 @@ import Testing
     #expect(sheet.pill == .soFar)
   }
 
+  /// Review focus 2, criterion 5: a nap from 17:30 that still runs at 18:20.
+  @Test func aRunningSleepFromBefore1800KeepsItsDaySoFarAfter1800AndLeavesTheNewDayEmpty() {
+    let night = ended("2026-11-10T19:50:00+01:00", "2026-11-11T06:40:00+01:00", .night)
+    let running = Sleep(id: UUID(), childID: child, start: date("2026-11-11T17:30:00+01:00"), end: nil, kind: .nap)
+    let now = date("2026-11-11T18:20:00+01:00")
+    let wednesday11 = SleepDay(named: day(2026, 11, 11))
+    #expect(wednesday11.hasEnded(now: now, in: amsterdam))
+
+    let sheet = DaySheet(sleepDay: wednesday11, sleeps: [night, running], birthDate: mila, now: now, in: amsterdam)
+    #expect(sheet.total == TimeInterval(11 * 3600 + 40 * 60))
+    #expect(sheet.summary == "11 h 40 m slept so far")
+    #expect(sheet.pill == .soFar)
+    #expect(!sheet.hasEnded)
+
+    let week = WeekStats(
+      week: Week.current(now: now, in: amsterdam), sleeps: [night, running], birthDate: mila, now: now, in: amsterdam)
+    #expect(week.days[2].state == .soFar)
+    #expect(week.days[2].judgement == nil)
+    #expect(week.days[2].total == 11 * 3600 + 40 * 60)
+    #expect(week.countedDays.isEmpty)
+    #expect(week.inRangeText == "–")
+    #expect(week.days[3].state == .empty)
+    #expect(week.days[3].total == 0)
+    let thursday = DaySheet(
+      sleepDay: SleepDay(named: day(2026, 11, 12)), sleeps: [night, running], birthDate: mila, now: now, in: amsterdam)
+    #expect(thursday.items.isEmpty)
+
+    // Once the nap ends at 18:30, Wednesday is counted with the full 1 h of the nap.
+    var ended = running
+    ended.end = date("2026-11-11T18:30:00+01:00")
+    let after = WeekStats(
+      week: Week.current(now: now, in: amsterdam), sleeps: [night, ended], birthDate: mila, now: now, in: amsterdam)
+    #expect(after.days[2].state == .counted)
+    #expect(after.days[2].total == 11 * 3600 + 50 * 60)
+    #expect(after.days[2].judgement == .inRange)
+  }
+
   /// Review focus 5.
   @Test func aNapMovedToAnotherDayLeavesTheFirstDayAndShowsInTheOther() {
     let night = ended("2026-11-02T20:54:00+01:00", "2026-11-03T06:12:00+01:00", .night)
@@ -179,8 +249,8 @@ import Testing
     nap.end = date("2026-11-04T14:24:00+01:00")
     let after = [night, nap, wednesdayNight]
 
-    #expect(tuesday.sleeps(crossingInto: after, now: now, in: amsterdam).map(\.id) == [night.id])
-    #expect(wednesday.sleeps(crossingInto: after, now: now, in: amsterdam).map(\.id) == [wednesdayNight.id, nap.id])
+    #expect(tuesday.sleeps(startingIn: after, in: amsterdam).map(\.id) == [night.id])
+    #expect(wednesday.sleeps(startingIn: after, in: amsterdam).map(\.id) == [wednesdayNight.id, nap.id])
 
     let statsBefore = stats(of: before, now: now)
     let statsAfter = stats(of: after, now: now)
@@ -189,7 +259,29 @@ import Testing
     #expect(statsAfter.days[2].total - statsBefore.days[2].total == 54 * 60)
   }
 
-  // MARK: The crosses-into rule in WeekStats
+  // MARK: The starts-in rule in WeekStats
+
+  /// Criterion 4: Wednesday holds only the tail of Tuesday's nap.
+  @Test func aPastDayWithOnlyTheTailOfASleepFromTheDayBeforeIsEmpty() {
+    let nap = ended("2026-11-03T17:30:00+01:00", "2026-11-03T18:30:00+01:00")
+    let week = stats(of: [nap], now: date(sundayEvening))
+    #expect(week.days[1].state == .counted)
+    #expect(week.days[1].total == 3600)
+    #expect(week.days[2].state == .empty)
+    #expect(week.days[2].total == 0)
+    #expect(week.countedDays.count == 1)
+    #expect(week.averageText == "1 h 00 m")
+  }
+
+  /// Review focus 3: the nap starts before the clock change at 18:00 and counts its real hour.
+  @Test func onTheDayTheClockGoesBackANapAcross1800CountsItsRealDurationOnItsDay() {
+    let nap = ended("2026-10-25T17:30:00+01:00", "2026-10-25T18:30:00+01:00")
+    let night = ended("2026-10-24T20:00:00+02:00", "2026-10-25T07:00:00+01:00", .night)
+    let sunday = SleepDay(named: day(2026, 10, 25))
+    let sheet = DaySheet(
+      sleepDay: sunday, sleeps: [night, nap], birthDate: mila, now: date("2026-10-26T10:00:00+01:00"), in: amsterdam)
+    #expect(sheet.summary == "13 h 00 m slept in total")
+  }
 
   @Test func aPastDayWhoseOnlySleepEndsAtExactly1800IsEmptyAndNotCounted() {
     let nap = ended("2026-11-03T17:00:00+01:00", "2026-11-03T18:00:00+01:00")
@@ -201,16 +293,21 @@ import Testing
     #expect(week.averageText == "1 h 00 m")
   }
 
-  @Test func theCurrentDayAfterThe1802AddIsEmptyWithNoSoFarBar() {
-    let now = date("2026-11-11T18:02:00+01:00")
+  /// Criterion 10.
+  @Test func theCurrentDayAfterThe1830AddIsEmptyWithNoSoFarBar() {
+    let now = date("2026-11-11T18:30:00+01:00")
     let values = DaySheet.startValues(on: SleepDay(containing: now, in: amsterdam), now: now, in: amsterdam)
     let added = Sleep(id: UUID(), childID: child, start: values.fellAsleep, end: values.wokeUp, kind: values.kind)
     let week = WeekStats(
       week: Week.current(now: now, in: amsterdam), sleeps: [added], birthDate: mila, now: now, in: amsterdam)
-    // Thursday 12 Nov is the current sleep day; the new sleep lies in Wednesday 11 Nov.
+    // Thursday 12 Nov is the current sleep day; the new sleep starts in Wednesday 11 Nov and counts whole there.
     #expect(week.days[3].state == .empty)
     #expect(week.days[2].state == .counted)
+    #expect(week.days[2].total == 3600)
     #expect(!week.days.contains { $0.state == .soFar })
+    let sheet = DaySheet(
+      sleepDay: SleepDay(containing: now, in: amsterdam), sleeps: [added], birthDate: mila, now: now, in: amsterdam)
+    #expect(sheet.items.isEmpty)
   }
 
   // MARK: Start values of "Add a sleep to this day"
@@ -224,15 +321,17 @@ import Testing
     #expect(values.kind == .nap)
   }
 
-  @Test func onTheCurrentDayAt1802TheStartValuesBelongToThePreviousSleepDay() {
-    let now = date("2026-11-11T18:02:00+01:00")
+  /// Criterion 10.
+  @Test func onTheCurrentDayAt1830TheStartValuesStartInThePreviousSleepDay() {
+    let now = date("2026-11-11T18:30:00+01:00")
     let today = SleepDay(containing: now, in: amsterdam)
     #expect(today.name == day(2026, 11, 12))
     let values = DaySheet.startValues(on: today, now: now, in: amsterdam)
-    #expect(values.fellAsleep == date("2026-11-11T17:00:00+01:00"))
-    #expect(values.wokeUp == date("2026-11-11T18:00:00+01:00"))
-    #expect(SleepDay(containing: values.fellAsleep, in: amsterdam).name == day(2026, 11, 11))
-    #expect(today.sleeps(crossingInto: [sleep(values)], now: now, in: amsterdam).isEmpty)
+    #expect(values.fellAsleep == date("2026-11-11T17:30:00+01:00"))
+    #expect(values.wokeUp == date("2026-11-11T18:30:00+01:00"))
+    let previous = SleepDay(named: day(2026, 11, 11))
+    #expect(previous.sleeps(startingIn: [sleep(values)], in: amsterdam).count == 1)
+    #expect(today.sleeps(startingIn: [sleep(values)], in: amsterdam).isEmpty)
   }
 
   @Test(arguments: [
@@ -249,7 +348,7 @@ import Testing
     #expect(values.fellAsleep == date(fellAsleep))
     #expect(values.wokeUp == date(wokeUp))
     #expect(values.kind == kind)
-    #expect(tuesday.sleeps(crossingInto: [sleep(values)], now: now, in: amsterdam).count == 1)
+    #expect(tuesday.sleeps(startingIn: [sleep(values)], in: amsterdam).count == 1)
   }
 
   // MARK: Helpers

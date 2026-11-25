@@ -84,12 +84,14 @@ import Testing
     #expect(stats.days.map(\.total) == totals)
   }
 
-  @Test func aSleepAcross1800IsSplitBetweenTheTwoSleepDays() {
+  /// Criterion 2.
+  @Test func aSleepAcross1800CountsWholeForTheSleepDayItStartsIn() {
     let stats = stats(
       of: [ended("2026-11-03T17:30:00+01:00", "2026-11-03T18:30:00+01:00")], week: (2026, 11, 2),
       now: "2026-11-11T10:00:00+01:00")
-    #expect(stats.days[1].total == 30 * 60)
-    #expect(stats.days[2].total == 30 * 60)
+    #expect(stats.days[1].total == 60 * 60)
+    #expect(stats.days[2].total == 0)
+    #expect(stats.days[2].state == .empty)
   }
 
   @Test func aSleepThatEndsAt1800LeavesTheNextDayEmpty() {

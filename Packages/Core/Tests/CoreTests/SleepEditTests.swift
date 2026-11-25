@@ -189,14 +189,14 @@ import Testing
 
   // MARK: After a save or a delete
 
-  /// Review focus 4: a 17:30 → 18:30 nap is a nap, and counts 30 m on each sleep day.
-  @Test func aNapFrom1730To1830Counts30MinutesOnEachSleepDay() {
+  /// A 17:30 → 18:30 nap is a nap, and counts its full 1 h for the sleep day it starts in (ADR 0006).
+  @Test func aNapFrom1730To1830CountsWholeForTheSleepDayItStartsIn() {
     let values = SleepStartValues.today(now: date("2026-06-21T18:30:00+02:00"), in: amsterdam)
     #expect(values.kind == .nap)
     let nap = ended(values.fellAsleep, values.wokeUp, kind: values.kind)
     #expect(problem(nap, now: date("2026-06-21T18:30:00+02:00")) == nil)
-    #expect(SleptToday.total(of: [nap], now: date("2026-06-21T20:00:00+02:00"), in: amsterdam) == 1800)
-    #expect(SleptToday.total(of: [nap], now: date("2026-06-22T10:00:00+02:00"), in: amsterdam) == 1800)
+    #expect(SleptToday.total(of: [nap], now: date("2026-06-21T20:00:00+02:00"), in: amsterdam) == 3600)
+    #expect(SleptToday.total(of: [nap], now: date("2026-06-22T10:00:00+02:00"), in: amsterdam) == 0)
   }
 
   /// Review focus 5.

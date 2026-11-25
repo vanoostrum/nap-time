@@ -1,30 +1,34 @@
 import Foundation
 
 extension SleepDay {
-  /// The sleeps that cross into this sleep day: each one that overlaps it by more than zero time, oldest first.
-  /// A sleep that ends at exactly 18:00 belongs only to the earlier day, and one that starts then only to the
-  /// later day. A running sleep runs until `now`.
-  public func sleeps(crossingInto sleeps: [Sleep], now: Date, in timeZone: TimeZone) -> [Sleep] {
+  /// The sleeps that start in this sleep day, oldest first. A sleep belongs to the sleep day that holds its start,
+  /// also when it crosses 18:00 (ADR 0006). A sleep that starts at exactly 18:00 belongs to the later day.
+  public func sleeps(startingIn sleeps: [Sleep], in timeZone: TimeZone) -> [Sleep] {
     let interval = interval(in: timeZone)
     return
       sleeps
-      .filter { $0.start < interval.end && ($0.end ?? now) > interval.start }
+      .filter { interval.start <= $0.start && $0.start < interval.end }
       .sorted { $0.start < $1.start }
   }
 
-  /// True from 18:00 on the named date.
+  /// True from 18:00 on the named date. A day with a running sleep stays "so far" after that (`isDone`).
   public func hasEnded(now: Date, in timeZone: TimeZone) -> Bool {
     interval(in: timeZone).end <= now
   }
 
-  /// The time asleep inside this sleep day: each sleep cut at 18:00, a running sleep until `now`.
-  func asleep(in sleeps: [Sleep], now: Date, in timeZone: TimeZone) -> TimeInterval {
-    let interval = interval(in: timeZone)
-    return sleeps.reduce(0) { total, sleep in
-      let start = max(sleep.start, interval.start)
-      let end = min(sleep.end ?? now, interval.end)
-      return total + max(0, end.timeIntervalSince(start))
-    }
+  /// True when 18:00 on the named date has passed and none of `sleepsOfTheDay` runs.
+  func isDone(with sleepsOfTheDay: [Sleep], now: Date, in timeZone: TimeZone) -> Bool {
+    hasEnded(now: now, in: timeZone) && !sleepsOfTheDay.contains(where: \.isRunning)
+  }
+
+  /// The full time asleep of the sleeps that start in this sleep day. A running sleep counts until `now`.
+  func asleep(startingIn sleeps: [Sleep], now: Date, in timeZone: TimeZone) -> TimeInterval {
+    Self.fullDuration(of: self.sleeps(startingIn: sleeps, in: timeZone), now: now)
+  }
+
+  /// The sum of the full durations of `sleeps`. A running sleep counts until `now`.
+  static func fullDuration(of sleeps: [Sleep], now: Date) -> TimeInterval {
+    sleeps.reduce(0) { $0 + max(0, ($1.end ?? now).timeIntervalSince($1.start)) }
   }
 
   /// "Monday 2 Nov".
@@ -64,18 +68,24 @@ public enum Timeline {
   }
 
   /// The parts of `sleeps` inside `sleepDay`, oldest first: each sleep cut at 18:00, a running sleep until `now`.
-  /// A segment sits at its clock times, so on the day the clock changes the row still spans 24 hours.
+  /// The timeline shows clock time, so a sleep that crosses 18:00 has a part in each row, though it counts only
+  /// for the day it starts in. A segment sits at its clock times, so on the day the clock changes the row still
+  /// spans 24 hours.
   public static func segments(on sleepDay: SleepDay, sleeps: [Sleep], now: Date, in timeZone: TimeZone)
     -> [TimelineSegment]
   {
     let interval = sleepDay.interval(in: timeZone)
-    return sleepDay.sleeps(crossingInto: sleeps, now: now, in: timeZone).map { sleep in
-      let start = max(sleep.start, interval.start)
-      let end = min(sleep.end ?? now, interval.end)
-      let from = start == interval.start ? 0 : hoursAfterSixPM(start, in: timeZone)
-      let to = end == interval.end ? 24 : hoursAfterSixPM(end, in: timeZone)
-      return TimelineSegment(sleepID: sleep.id, kind: sleep.kind, from: from, length: max(0, to - from))
-    }
+    return
+      sleeps
+      .filter { $0.start < interval.end && ($0.end ?? now) > interval.start }
+      .sorted { $0.start < $1.start }
+      .map { sleep in
+        let start = max(sleep.start, interval.start)
+        let end = min(sleep.end ?? now, interval.end)
+        let from = start == interval.start ? 0 : hoursAfterSixPM(start, in: timeZone)
+        let to = end == interval.end ? 24 : hoursAfterSixPM(end, in: timeZone)
+        return TimelineSegment(sleepID: sleep.id, kind: sleep.kind, from: from, length: max(0, to - from))
+      }
   }
 
   /// The clock time of `instant` as hours after 18:00: 18:00 is 0, 06:00 is 12.
@@ -88,7 +98,8 @@ public enum Timeline {
 
 /// The day sheet of one sleep day: its sleeps, its total, and its pill.
 public struct DaySheet: Sendable {
-  /// The pill in the sheet head: the verdict of a counted day, or "So far" on a day that has not ended.
+  /// The pill in the sheet head: the verdict of a counted day, or "So far" on a day that has not ended
+  /// or that holds a running sleep.
   public enum Pill: Hashable, Sendable {
     case judgement(WeekStats.Judgement)
     case soFar
@@ -109,16 +120,17 @@ public struct DaySheet: Sendable {
 
   public let sleepDay: SleepDay
   public let items: [Item]
-  /// The time asleep inside the sleep day.
+  /// The full durations of the sleeps that start in the sleep day. A running sleep counts until now.
   public let total: TimeInterval
+  /// True when 18:00 on the named date has passed and none of the day's sleeps runs.
   public let hasEnded: Bool
   private let range: RecommendedRange
 
   /// `sleeps` are the sleeps of one child, born on `birthDate`.
   public init(sleepDay: SleepDay, sleeps: [Sleep], birthDate: BirthDate, now: Date, in timeZone: TimeZone) {
     self.sleepDay = sleepDay
-    let crossing = sleepDay.sleeps(crossingInto: sleeps, now: now, in: timeZone)
-    items = crossing.map { sleep in
+    let own = sleepDay.sleeps(startingIn: sleeps, in: timeZone)
+    items = own.map { sleep in
       let start = ClockTime.text(sleep.start, in: timeZone)
       let end = sleep.end.map { ClockTime.text($0, in: timeZone) } ?? "now"
       let kind = sleep.kind == .night ? "Night" : "Nap"
@@ -127,8 +139,8 @@ public struct DaySheet: Sendable {
         duration: SleepDuration.text((sleep.end ?? now).timeIntervalSince(sleep.start)),
         editLabel: "Edit \(sleep.kind.rawValue)")
     }
-    total = sleepDay.asleep(in: crossing, now: now, in: timeZone)
-    hasEnded = sleepDay.hasEnded(now: now, in: timeZone)
+    total = SleepDay.fullDuration(of: own, now: now)
+    hasEnded = sleepDay.isDone(with: own, now: now, in: timeZone)
     range = RecommendedRange(birthDate: birthDate, on: sleepDay.name)
   }
 
@@ -141,7 +153,8 @@ public struct DaySheet: Sendable {
     return "\(SleepDuration.text(total)) slept \(hasEnded ? "in total" : "so far")"
   }
 
-  /// "So far" until the day ends, also with no sleeps; the verdict on a counted day; none on a past empty day.
+  /// "So far" until the day ends or while one of its sleeps runs, also with no sleeps; the verdict on a counted day;
+  /// none on a past empty day.
   public var pill: Pill? {
     guard hasEnded else { return .soFar }
     guard !items.isEmpty else { return nil }

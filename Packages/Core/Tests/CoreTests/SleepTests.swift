@@ -80,13 +80,14 @@ import Testing
 
   // MARK: Slept today
 
-  @Test func sleptTodayCutsASleepAt18() {
-    // A nap from 17:00 to 18:30: 1 h for 21 June, 30 m for 22 June.
+  /// Criterion 6 and review focus 5.
+  @Test func sleptTodayCountsASleepAcross18WholeForTheDayItStartsIn() {
+    // A nap from 17:00 to 18:30 counts 1 h 30 m for 21 June, and nothing for 22 June.
     let nap = sleep("2026-06-21T17:00:00+02:00", "2026-06-21T18:30:00+02:00")
-    #expect(SleptToday.total(of: [nap], now: date("2026-06-21T17:59:00+02:00"), in: amsterdam) == 3600)
+    #expect(SleptToday.total(of: [nap], now: date("2026-06-21T18:45:00+02:00"), in: amsterdam) == 5400)
+    #expect(SleptToday.total(of: [nap], now: date("2026-06-21T23:50:00+02:00"), in: amsterdam) == 5400)
     let night = sleep("2026-06-21T19:00:00+02:00", "2026-06-22T07:00:00+02:00")
-    #expect(
-      SleptToday.total(of: [nap, night], now: date("2026-06-22T08:00:00+02:00"), in: amsterdam) == 1800 + 12 * 3600)
+    #expect(SleptToday.total(of: [nap, night], now: date("2026-06-22T08:00:00+02:00"), in: amsterdam) == 12 * 3600)
   }
 
   @Test func inTheEveningSleptTodayCountsTheSleepDayThatJustEnded() {
@@ -110,9 +111,9 @@ import Testing
     // Summer time: 02:00 becomes 03:00 on 29 March 2026, so 20:00 to 07:00 is 10 hours.
     let spring = sleep("2026-03-28T20:00:00+01:00", "2026-03-29T07:00:00+02:00")
     #expect(SleptToday.total(of: [spring], now: date("2026-03-29T09:00:00+02:00"), in: amsterdam) == 10 * 3600)
-    // A nap across 18:00 on the day of the change is still cut at 18:00 local time.
+    // A nap across 18:00 on the day of the change counts whole for the day it starts in.
     let nap = sleep("2026-10-25T17:30:00+01:00", "2026-10-25T18:30:00+01:00")
-    #expect(SleptToday.total(of: [nap], now: date("2026-10-25T17:59:00+01:00"), in: amsterdam) == 1800)
+    #expect(SleptToday.total(of: [nap], now: date("2026-10-25T18:45:00+01:00"), in: amsterdam) == 3600)
     #expect(
       ChildStatus(sleeps: [autumn], now: date("2026-10-25T07:00:00+01:00"), in: amsterdam).line
         == "since 07:00 · 12 h 00 m slept today")

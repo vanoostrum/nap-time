@@ -22,14 +22,15 @@ public struct BedtimeWindow: Equatable, Sendable {
     end = TimeOfDay(seconds: ideal + 15 * 60).roundedToFiveMinutes
   }
 
-  /// The mean nap time per sleep day of `days`: each nap cut at 18:00, as the hours per day are (ADR 0006).
+  /// The mean nap time per sleep day of `days`: each nap counts whole for the day it starts in, as the hours per
+  /// day do (ADR 0006).
   /// 0 with no days.
   public static func averageNap(of sleeps: [Sleep], on days: [SleepDay], now: Date, in timeZone: TimeZone)
     -> TimeInterval
   {
     guard !days.isEmpty else { return 0 }
     let naps = sleeps.filter { $0.kind == .nap }
-    return days.reduce(0) { $0 + $1.asleep(in: naps, now: now, in: timeZone) } / Double(days.count)
+    return days.reduce(0) { $0 + $1.asleep(startingIn: naps, now: now, in: timeZone) } / Double(days.count)
   }
 }
 
