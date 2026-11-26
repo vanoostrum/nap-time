@@ -1,4 +1,4 @@
-"""A static test of .github/workflows/release.yml (CRAFT-76, CRAFT-77). Run: python3 -m unittest discover -s scripts -p 'test_*.py'
+"""A static test of .github/workflows/release.yml (CRAFT-76, CRAFT-77, CRAFT-102). Run: python3 -m unittest discover -s scripts -p 'test_*.py'
 
 It reads the workflow as text, split by its indentation, so it needs no YAML package.
 """
@@ -9,8 +9,6 @@ import re
 import subprocess
 import tempfile
 import unittest
-
-from schema_check import newest_marked_tag
 
 WORKFLOW = pathlib.Path(__file__).resolve().parent.parent / ".github/workflows/release.yml"
 SECRETS = {"ASC_KEY_ID", "ASC_ISSUER_ID", "ASC_KEY_P8"}
@@ -57,48 +55,30 @@ class ReleaseWorkflowTests(unittest.TestCase):
         cls.text = WORKFLOW.read_text()
         cls.top = blocks(cls.text, 0)
         cls.jobs = blocks(cls.top["jobs"], 2)
-        cls.schema = cls.jobs["schema"]
         cls.release = cls.jobs["release"]
         cls.tag = cls.jobs["tag"]
 
     def test_the_only_trigger_is_workflow_dispatch(self):
         self.assertEqual(list(blocks(self.top["on"], 2)), ["workflow_dispatch"])
 
-    def test_the_jobs_are_schema_release_and_tag(self):
-        self.assertEqual(list(self.jobs), ["schema", "release", "tag"])
+    def test_workflow_dispatch_takes_no_inputs(self):
+        self.assertEqual(blocks(self.top["on"], 2)["workflow_dispatch"], "  workflow_dispatch:\n")
 
-    def test_schema_deployed_is_a_boolean_input_that_starts_unticked(self):
-        inputs = blocks(blocks(self.top["on"], 2)["workflow_dispatch"], 4)["inputs"]
-        schema_deployed = blocks(inputs, 6)["schema_deployed"]
-        self.assertIn("        type: boolean\n", schema_deployed)
-        self.assertIn("        default: false\n", schema_deployed)
+    def test_the_jobs_are_release_and_tag(self):
+        self.assertEqual(list(self.jobs), ["release", "tag"])
 
-    def test_schema_runs_on_main_with_no_environment_and_no_secrets(self):
-        self.assertIn("    if: github.ref == 'refs/heads/main'\n", self.schema)
-        self.assertNotIn("environment", self.schema)
-        self.assertNotIn("secrets.", self.schema)
-        self.assertEqual(blocks(self.schema, 4)["permissions"], "    permissions:\n      contents: read\n")
+    def test_release_needs_no_job(self):
+        self.assertNotIn("needs", blocks(self.release, 4))
 
-    def test_schema_checks_out_every_tag_and_runs_the_check_with_the_input_in_env(self):
-        s = steps(self.schema)
-        checkout = s[index_of(s, "actions/checkout")]
-        self.assertIn("fetch-depth: 0", checkout)
-        check = s[index_of(s, "scripts/schema_check.py")]
-        self.assertIn("SCHEMA_DEPLOYED: ${{ inputs.schema_deployed }}", check.split("run:", 1)[0])
-        for step in s:
-            run = step.split("run:", 1)[1] if "run:" in step else ""
-            self.assertNotIn("${{ inputs.", run, step)
-
-    def test_release_needs_schema(self):
-        self.assertIn("    needs: schema\n", self.release)
-
-    def test_tag_sets_an_identity_then_pushes_an_annotated_tag_with_the_marker(self):
+    def test_tag_sets_an_identity_then_pushes_an_annotated_tag_with_one_message(self):
         run = tag_script(self.tag)
         name = run.index("git config user.name")
         email = run.index("git config user.email")
         annotated = run.index("git tag -a")
         self.assertLess(max(name, email), annotated)
-        self.assertIn('-m "schema-check: yes"', run)
+        tag_line = next(line for line in run.splitlines() if "git tag -a" in line)
+        self.assertEqual(tag_line.count(" -m "), 1, tag_line)
+        self.assertIn('-m "Release $GITHUB_RUN_NUMBER"', tag_line)
 
     def test_release_runs_only_on_main_in_testflight(self):
         self.assertIn("    if: github.ref == 'refs/heads/main'\n", self.release)
@@ -178,7 +158,7 @@ def tag_script(tag_job):
 class TagScriptTests(unittest.TestCase):
     """Runs the tag step of release.yml word for word in a repository with no other git identity."""
 
-    def test_the_tag_step_makes_a_marked_tag_that_the_schema_check_counts(self):
+    def test_the_tag_step_pushes_an_annotated_tag_with_the_bot_tagger_and_the_release_message(self):
         run = tag_script(blocks(blocks(WORKFLOW.read_text(), 0)["jobs"], 2)["tag"])
         with tempfile.TemporaryDirectory() as tmp:
             home = pathlib.Path(tmp)
@@ -211,7 +191,9 @@ class TagScriptTests(unittest.TestCase):
             self.assertEqual(git("cat-file", "-t", "release/7", cwd=origin), "tag")
             tagger = git("for-each-ref", "--format=%(taggername) %(taggeremail)", "refs/tags/release/7", cwd=origin)
             self.assertEqual(tagger, "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>")
-            self.assertEqual(newest_marked_tag(str(origin)), "release/7")
+            message = git("for-each-ref", "--format=%(contents)", "refs/tags/release/7", cwd=origin)
+            self.assertEqual(message, "Release 7")
+            self.assertEqual(git("rev-parse", "release/7^{commit}", cwd=origin), env["GITHUB_SHA"])
 
 
 if __name__ == "__main__":
