@@ -246,13 +246,13 @@ import Testing
     #expect(BedtimeWindow(wakeUp: nil, range: range, averageNap: 0) == nil)
   }
 
-  /// Review focus 4.
-  @Test func aNapAcross1800AddsOnlyItsPartInsideTheDay() throws {
+  /// Criterion 7.
+  @Test func aNapAcross1800AddsWholeToTheDayItStartsIn() throws {
     let nap = sleep("2026-11-03T17:00:00+01:00", "2026-11-03T18:30:00+01:00", .nap)
     let tuesday = SleepDay(named: BirthDate(year: 2026, month: 11, day: 3)!)
     let wednesday = SleepDay(named: BirthDate(year: 2026, month: 11, day: 4)!)
-    #expect(BedtimeWindow.averageNap(of: [nap], on: [tuesday], now: sundayEvening, in: amsterdam) == 3600)
-    #expect(BedtimeWindow.averageNap(of: [nap], on: [wednesday], now: sundayEvening, in: amsterdam) == 1800)
+    #expect(BedtimeWindow.averageNap(of: [nap], on: [tuesday], now: sundayEvening, in: amsterdam) == 5400)
+    #expect(BedtimeWindow.averageNap(of: [nap], on: [wednesday], now: sundayEvening, in: amsterdam) == 0)
     #expect(BedtimeWindow.averageNap(of: [nap], on: [tuesday, wednesday], now: sundayEvening, in: amsterdam) == 2700)
 
     // 12 h 30 m minus 45 m is a night of 11 h 45 m, so from 06:30 the ideal bedtime is 18:45.

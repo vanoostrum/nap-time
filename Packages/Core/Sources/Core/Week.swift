@@ -55,8 +55,8 @@ public struct Week: Hashable, Comparable, Sendable {
 
 /// The totals of each sleep day of a week, which days count, and how they compare with the recommended range.
 public struct WeekStats: Sendable {
-  /// A sleep day with sleep that has ended is counted. One that has not ended yet is so far.
-  /// A day with no sleep in it is empty.
+  /// A sleep day with sleep that has ended and holds no running sleep is counted. One that has not ended yet,
+  /// or that holds a running sleep, is so far. A day in which no sleep starts is empty.
   public enum DayState: Sendable {
     case counted
     case soFar
@@ -82,7 +82,7 @@ public struct WeekStats: Sendable {
 
   public struct Day: Sendable {
     public let sleepDay: SleepDay
-    /// The time asleep inside the sleep day. A running sleep counts until now.
+    /// The full durations of the sleeps that start in the sleep day. A running sleep counts until now.
     public let total: TimeInterval
     public let state: DayState
     /// The recommended range for the child's age on this day.
@@ -108,12 +108,12 @@ public struct WeekStats: Sendable {
   public init(week: Week, sleeps: [Sleep], birthDate: BirthDate, now: Date, in timeZone: TimeZone) {
     self.week = week
     days = week.days.map { sleepDay in
-      // A day has a sleep when a sleep crosses into it by more than zero time, so its total is above 0.
-      let total = sleepDay.asleep(in: sleeps, now: now, in: timeZone)
-      let state: DayState = total <= 0 ? .empty : sleepDay.hasEnded(now: now, in: timeZone) ? .counted : .soFar
+      let own = sleepDay.sleeps(startingIn: sleeps, in: timeZone)
+      let state: DayState =
+        own.isEmpty ? .empty : sleepDay.isDone(with: own, now: now, in: timeZone) ? .counted : .soFar
       return Day(
-        sleepDay: sleepDay, total: total, state: state, range: RecommendedRange(birthDate: birthDate, on: sleepDay.name)
-      )
+        sleepDay: sleepDay, total: SleepDay.fullDuration(of: own, now: now), state: state,
+        range: RecommendedRange(birthDate: birthDate, on: sleepDay.name))
     }
   }
 

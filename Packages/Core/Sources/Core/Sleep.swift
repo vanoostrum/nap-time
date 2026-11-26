@@ -73,16 +73,11 @@ public struct SleepDay: Hashable, Sendable {
 /// The total of "slept today" on the home screen.
 public enum SleptToday {
   /// The sleep in the sleep day named after today's date: before 18:00 the current sleep day,
-  /// from 18:00 to midnight the sleep day that just ended. Each sleep is cut to that sleep day,
-  /// and a running sleep counts until `now`.
+  /// from 18:00 to midnight the sleep day that just ended. Each sleep that starts in that sleep day
+  /// counts whole, and a running sleep counts until `now`.
   public static func total(of sleeps: [Sleep], now: Date, in timeZone: TimeZone) -> TimeInterval {
     let today = BirthDate(now, in: Calendar.gregorian(in: timeZone))
-    let day = SleepDay(named: today).interval(in: timeZone)
-    return sleeps.reduce(0) { total, sleep in
-      let start = max(sleep.start, day.start)
-      let end = min(sleep.end ?? now, day.end)
-      return total + max(0, end.timeIntervalSince(start))
-    }
+    return SleepDay(named: today).asleep(startingIn: sleeps, now: now, in: timeZone)
   }
 }
 
