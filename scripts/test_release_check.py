@@ -24,6 +24,7 @@ from release_check import (
 )
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
+PROJECT_VERSION = marketing_version(REPO / "project.yml")
 
 
 def app_info(**changes):
@@ -145,7 +146,7 @@ class ArchiveTests(unittest.TestCase):
         self.assertIn(WIDGET, errors[0])
 
     def test_the_version_comes_from_project_yml(self):
-        self.assertEqual(marketing_version(REPO / "project.yml"), "1.0.0")
+        self.assertEqual(marketing_version(REPO / "project.yml"), "1.0.1")
 
     def test_the_archive_command_reads_the_archive(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -153,8 +154,12 @@ class ArchiveTests(unittest.TestCase):
             app = archive / "Products/Applications" / APP
             widget = app / "PlugIns" / WIDGET
             widget.mkdir(parents=True)
-            (app / "Info.plist").write_bytes(plistlib.dumps(app_info(), fmt=plistlib.FMT_BINARY))
-            (widget / "Info.plist").write_bytes(plistlib.dumps(widget_info(), fmt=plistlib.FMT_BINARY))
+            (app / "Info.plist").write_bytes(
+                plistlib.dumps(app_info(CFBundleShortVersionString=PROJECT_VERSION), fmt=plistlib.FMT_BINARY)
+            )
+            (widget / "Info.plist").write_bytes(
+                plistlib.dumps(widget_info(CFBundleShortVersionString=PROJECT_VERSION), fmt=plistlib.FMT_BINARY)
+            )
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
                 self.assertEqual(main(["archive", str(archive), "--build", "42"]), 0)
@@ -270,8 +275,8 @@ class ArchivedEntitlementTests(unittest.TestCase):
             app = archive / "Products/Applications" / APP
             widget = app / "PlugIns" / WIDGET
             widget.mkdir(parents=True)
-            (app / "Info.plist").write_bytes(plistlib.dumps(app_info()))
-            (widget / "Info.plist").write_bytes(plistlib.dumps(widget_info()))
+            (app / "Info.plist").write_bytes(plistlib.dumps(app_info(CFBundleShortVersionString=PROJECT_VERSION)))
+            (widget / "Info.plist").write_bytes(plistlib.dumps(widget_info(CFBundleShortVersionString=PROJECT_VERSION)))
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
                 self.assertEqual(main(["archive", str(archive), "--build", "42"]), 0)
